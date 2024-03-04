@@ -23,7 +23,6 @@ class Sprite {
         c.drawImage(
             this.image,
             this.framesCurrent * (this.image.width / this.frameMax),
-            0,
             this.image.width / this.frameMax,
             this.image.height,
             this.position.x - this.offset.x,
