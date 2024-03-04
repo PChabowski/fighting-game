@@ -11,11 +11,11 @@ function whoWins() {
     clearTimeout(stopTimer);
     document.querySelector('#whoWin').style.display = 'flex';
     if (player.health === enemy.health) {
-        document.querySelector('#whoWin').innerHTML = 'Tie';
+        document.querySelector('#whoWin').innerHTML = '<div>Tie</div><div class id="restart">Restart</div>';
     } else if (player.health > enemy.health) {
-        document.querySelector('#whoWin').innerHTML = 'Player 1 Wins';
+        document.querySelector('#whoWin').innerHTML = '<div>Player 1 Wins</div><div class id="restart">Restart</div>';
     } else if (player.health < enemy.health) {
-        document.querySelector('#whoWin').innerHTML = 'Player 2 Wins';
+        document.querySelector('#whoWin').innerHTML = '<div>Player 2 Wins</div><div class id="restart">Restart</div>';
     }
 }
 
