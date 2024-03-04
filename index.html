@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fighting Game</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: "Press Start 2P", system-ui;
+        }
+        body {
+            background-color: #2e2e2e;
+        }
+        .conteiner {
+            display: inline-block;
+            position: relative;
+        }
+        .interface {
+            align-items: center;
+            display: flex;
+            position: absolute;
+            margin-top: 10px;
+            width: 100%;
+            justify-content: center;
+        }
+        .health-bar {
+            position: relative;
+            background-color: red;
+            height: 30px;
+            width: 400px;
+        }
+        .player,
+        .enemy {
+            background-color: green;
+            height: 100%;
+        }
+        .player {
+            margin-right: 0;
+            margin-left: auto;
+        }
+        .timer {
+            background-color: #030712;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 14px;
+            height: 50px;
+            width: 100px;
+            margin-left: 15px;
+            margin-right: 15px;
+        }
+        .health-bar,
+        .timer {
+            border: 4px solid white;
+        }
+        .who-win {
+            position: absolute;
+            color: white;
+        }
+        .who-win {
+            position: absolute;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 17px;
+            left: 0;
+            right: 0;
+            top: 0;
+            bottom: 0;
+        }
+
+    </style>
+</head>
+
+<body>
+    <div class="conteiner">
+        <div class="interface">
+            <div class="health-bar">
+                <div id="playerHealth" class="player" style="width: 100%;"></div>
+            </div>
+            <div id="timer" class="timer"></div>
+            <div class="health-bar">
+                <div id="enemyHealth" class="enemy" style="width: 100%;"></div>
+            </div>
+        </div>
+        <div id="whoWin" class="who-win"></div>
+        <canvas></canvas>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js" integrity="sha512-H6cPm97FAsgIKmlBA4s774vqoN24V5gSQL4yBTDOY2su2DeXZVhQPxFK4P6GPdnZqM9fg1G3cMv5wD7e6cFLZQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="js/untils.js"></script>
+<script src="js/classes.js"></script>
+<script src="game.js"></script>
+</body>
+
+</html>
