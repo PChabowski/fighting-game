@@ -32,3 +32,9 @@ function decrementTimer() {
         whoWins();
     }
 }
+
+function jump(player) {
+    if (player.velocity.y === 0) {
+        player.velocity.y = -15;
+    }
+}
