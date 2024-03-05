@@ -77,7 +77,10 @@
         .who-win > div {
             margin: 15px 0;
         }
-        #restart {
+        .button {
+            background-color: rgb(192 132 132 / 46%);
+            border: 3px solid;
+            padding: 10px;
             cursor: pointer;
         }
 
@@ -95,11 +98,14 @@
                 <div id="enemyHealth" class="enemy" style="width: 100%;"></div>
             </div>
         </div>
-        <div id="whoWin" class="who-win"></div>
+        <div id="whoWin" class="who-win">
+            <div id="win"></div>
+            <button class="button" id="restart" onclick="restartGame()">Restart</button>
+        </div>
         <canvas></canvas>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js" integrity="sha512-H6cPm97FAsgIKmlBA4s774vqoN24V5gSQL4yBTDOY2su2DeXZVhQPxFK4P6GPdnZqM9fg1G3cMv5wD7e6cFLZQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js" integrity="sha512-H6cPm97FAsgIKmlBA4s774vqoN24V5gSQL4yBTDOY2su2DeXZVhQPxFK4P6GPdnZqM9fg1G3cMv5wD7e6cFLZQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="js/untils.js"></script>
 <script src="js/classes.js"></script>
 <script src="game.js"></script>
