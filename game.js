@@ -35,7 +35,7 @@ const player = new Fighter({
         x: 0,
         y: 0
     },
-    imageSrc: './img/Mack/idle.png',
+    imageSrc: './img/Mack/Idle.png',
     scale: 2.5,
     frameMax: 8,
     offset: {
@@ -44,7 +44,7 @@ const player = new Fighter({
     },
     sprites: {
         idle: {
-            imageSrc: './img/Mack/idle.png',
+            imageSrc: './img/Mack/Idle.png',
             frameMax: 8
         },
         run: {
@@ -92,7 +92,7 @@ const enemy = new Fighter({
         y: 0
     },
     color: 'yellow',
-    imageSrc: './img/Kenji/idle.png',
+    imageSrc: './img/Kenji/Idle.png',
     scale: 2.5,
     frameMax: 4,
     offset: {
@@ -101,7 +101,7 @@ const enemy = new Fighter({
     },
     sprites: {
         idle: {
-            imageSrc: './img/Kenji/idle.png',
+            imageSrc: './img/Kenji/Idle.png',
             frameMax: 4
         },
         run: {
