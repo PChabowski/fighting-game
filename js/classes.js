@@ -29,8 +29,6 @@ class Sprite {
         c.save(); 
 
         if (this.facing === 'left') {
-            // Przesuwamy kontekst do prawej krawędzi sprita i odwracamy skalę
-            // Używamy pozycji X i offsetu, aby postać została w tym samym miejscu fizycznym
             c.translate(this.position.x - this.offset.x + scaledWidth, 0);
             c.scale(-1, 1);
             
@@ -40,7 +38,7 @@ class Sprite {
                 0,
                 singleFrameWidth,
                 this.image.height,
-                0, // Rysujemy od zera, bo translate załatwił pozycję
+                0,
                 this.position.y - this.offset.y,
                 scaledWidth,
                 this.image.height * this.scale
@@ -120,6 +118,7 @@ class Fighter extends Sprite {
         this.framesHold = 7;
         this.sprites = sprites;
         this.dead = false;
+        this.canAttack = true; // Flaga blokująca spamowanie atakiem
 
         for (const sprite in this.sprites) {
             this.sprites[sprite].image = new Image();
@@ -127,19 +126,29 @@ class Fighter extends Sprite {
         }
     }
 
+    restart(startPosition) {
+        this.dead = false;
+        this.health = 100;
+        this.position = { ...startPosition };
+        this.velocity = { x: 0, y: 0 };
+        this.canAttack = true;
+        
+        // Wymuszamy zmianę obrazka na idle bezpośrednio, omijając blokady switchSprite
+        this.image = this.sprites.idle.image;
+        this.frameMax = this.sprites.idle.frameMax;
+        this.framesCurrent = 0;
+    }
+
     update() {
         this.draw();
         if (!this.dead) this.animateFrames();
 
-        // Logika kierunku na podstawie prędkości
         if (this.velocity.x > 0) this.facing = 'right';
         else if (this.velocity.x < 0) this.facing = 'left';
 
-        // Hitboxy ataku - precyzyjne przesuwanie względem kierunku
         if (this.facing === 'right') {
             this.attackBox.position.x = this.position.x + this.attackBox.offset.x;
         } else {
-            // Gdy patrzy w lewo: pozycja postaci + szerokość postaci - szerokość hitboxa - offset
             this.attackBox.position.x = this.position.x + this.width - this.attackBox.width - this.attackBox.offset.x;
         }
         
@@ -148,7 +157,6 @@ class Fighter extends Sprite {
         this.position.x += this.velocity.x;
         this.position.y += this.velocity.y;
 
-        // Grawitacja
         if (this.position.y + this.height + this.velocity.y >= canvas.height - 96) {
             this.velocity.y = 0;
             this.position.y = 330;
@@ -158,6 +166,10 @@ class Fighter extends Sprite {
     }
 
     attack() {
+        // Sprawdzamy czy postać może zaatakować (musi puścić klawisz i nie może być w trakcie animacji śmierci)
+        if (!this.canAttack || this.dead) return;
+
+        // Jeśli postać już atakuje, nie pozwól na przerwanie animacji ataku nowym atakiem
         if (
             this.image === this.sprites.attack.image && 
             this.framesCurrent < this.sprites.attack.frameMax - 1
@@ -165,6 +177,7 @@ class Fighter extends Sprite {
 
         this.switchSprite('attack');
         this.isAttacking = true;
+        this.canAttack = false; // Blokada: kolejny atak dopiero po puszczeniu klawisza
     }
 
     takeHit() {
@@ -176,25 +189,23 @@ class Fighter extends Sprite {
         }
     }
 
-    resetPlayer() {
-        this.image = this.sprites.idle.image;
-        this.frameMax = this.sprites.idle.frameMax;
-        this.dead = false;
-        this.health = 100;
-    }
-
     switchSprite(sprite) {
+        // Blokada: jeśli postać umarła i animacja się skończyła, nic nie zmieniaj
         if (this.image === this.sprites.death.image) {
             if (this.framesCurrent === this.sprites.death.frameMax - 1) this.dead = true;
             return;
         }
 
+        // Zabezpieczenie przed przerwaniem animacji ataku (chyba że postać umiera)
         if (
+            sprite !== 'death' &&
             this.image === this.sprites.attack.image && 
             this.framesCurrent < this.sprites.attack.frameMax - 1
         ) return;
 
+        // Zabezpieczenie przed przerwaniem animacji otrzymania obrażeń (chyba że postać umiera)
         if (
+            sprite !== 'death' &&
             this.image === this.sprites.takeHit.image && 
             this.framesCurrent < this.sprites.takeHit.frameMax - 1
         ) return;

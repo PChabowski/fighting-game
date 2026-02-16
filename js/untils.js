@@ -43,10 +43,10 @@ function restartGame() {
     document.querySelector('#whoWin').style.display = 'none';
     timer = 60;
     decrementTimer();
-    player.resetPlayer();
-    enemy.resetPlayer();
-    document.querySelector('#playerHealth').style.width = player.health + '%';
-    document.querySelector('#enemyHealth').style.width = enemy.health + '%';
-    player.position = { x: 200, y:330}
-    enemy.position = { x: 700, y:330}
+    
+    player.restart({ x: 200, y: 330 });
+    enemy.restart({ x: 700, y: 330 });
+
+    document.querySelector('#playerHealth').style.width = '100%';
+    document.querySelector('#enemyHealth').style.width = '100%';
 }
