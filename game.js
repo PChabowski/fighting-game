@@ -172,6 +172,9 @@ function animate() {
   window.requestAnimationFrame(animate);
   c.fillStyle = "black";
   c.fillRect(0, 0, canvas.width, canvas.height);
+
+  handleGamepadInput(player, enemy, keys);
+
   background.update();
   shop.update();
   c.fillStyle = "rgba(255, 255, 255, 0.15)";
