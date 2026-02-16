@@ -176,6 +176,13 @@ class Fighter extends Sprite {
         }
     }
 
+    resetPlayer() {
+        this.image = this.sprites.idle.image;
+        this.frameMax = this.sprites.idle.frameMax;
+        this.dead = false;
+        this.health = 100;
+    }
+
     switchSprite(sprite) {
         if (this.image === this.sprites.death.image) {
             if (this.framesCurrent === this.sprites.death.frameMax - 1) this.dead = true;

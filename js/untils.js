@@ -43,12 +43,10 @@ function restartGame() {
     document.querySelector('#whoWin').style.display = 'none';
     timer = 60;
     decrementTimer();
-    player.health = 100;
-    enemy.health = 100;
+    player.resetPlayer();
+    enemy.resetPlayer();
     document.querySelector('#playerHealth').style.width = player.health + '%';
     document.querySelector('#enemyHealth').style.width = enemy.health + '%';
-    player.dead = false;
-    enemy.dead = false;
     player.position = { x: 200, y:330}
     enemy.position = { x: 700, y:330}
 }
