@@ -1,0 +1,72 @@
+* {
+  box-sizing: border-box;
+  font-family: "Press Start 2P", system-ui;
+}
+body {
+  background-color: #2e2e2e;
+}
+.conteiner {
+  display: inline-block;
+  position: relative;
+}
+.interface {
+  align-items: center;
+  display: flex;
+  position: absolute;
+  margin-top: 10px;
+  width: 100%;
+  justify-content: center;
+}
+.health-bar {
+  position: relative;
+  background-color: red;
+  height: 30px;
+  width: 400px;
+}
+.player,
+.enemy {
+  background-color: green;
+  height: 100%;
+}
+.player {
+  margin-right: 0;
+  margin-left: auto;
+}
+.timer {
+  background-color: #030712;
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 14px;
+  height: 50px;
+  width: 100px;
+  margin-left: 15px;
+  margin-right: 15px;
+}
+.health-bar,
+.timer {
+  border: 4px solid white;
+}
+.who-win {
+  position: absolute;
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  color: white;
+  font-size: 17px;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+}
+.who-win > div {
+  margin: 15px 0;
+}
+.button {
+  background-color: rgb(192 132 132 / 46%);
+  border: 3px solid;
+  padding: 10px;
+  cursor: pointer;
+}
