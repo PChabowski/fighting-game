@@ -8,6 +8,7 @@ import { isMobile, initMobileControls } from './utils/mobile.js';
 import { alignSpriteToGround } from './utils/scale.js';
 import { initResponsiveCanvas } from './utils/responsive.js';
 import { GameInterface } from './ui/GameInterface.js';
+import { GameMenu } from './ui/GameMenu.js';
 
 const canvas = document.querySelector("canvas");
 const c = canvas.getContext("2d");
@@ -91,6 +92,20 @@ alignSpriteToGround(shop, canvas.height);
 const gameInterface = new GameInterface('.interface');
 gameInterface.reset();
 
+// Game start menu: show on load and hide interface until Game Start pressed
+const gameMenu = new GameMenu();
+gameMenu.show(gameInterface.container.parentElement || document.body);
+// keep canvas visible so background/shop remain visible; hide only overlays
+let menuActive = true;
+gameInterface.container.classList.add('hidden');
+
+gameMenu.onStart(() => {
+  // reveal interface and begin the game
+  menuActive = false;
+  gameInterface.container.classList.remove('hidden');
+  try { window.restartGame(); } catch (e) { /* ignore */ }
+});
+
 const keys = {
   a: { pressed: false },
   d: { pressed: false },
@@ -144,10 +159,7 @@ if (isMobile()) {
   }
 }
 
-decrementTimer(() => {
-  const msg = whoWins(player, enemy);
-  try { gameInterface.winModal.show(msg, gameInterface.container.parentElement || document.body); } catch (e) {}
-}, (t) => gameInterface.timer.set(t));
+// Timer will be started by `restartGame()` when the player clicks Game Start.
 
 function animate() {
   window.requestAnimationFrame(animate);
@@ -155,7 +167,7 @@ function animate() {
   const restartHandler = (p, e) => {
     try { window.restartGame(); } catch (err) { /* ignore */ }
   };
-  handleGamepadInput(player, enemy, keys, { jump, restartGame: restartHandler });
+  if (!menuActive) handleGamepadInput(player, enemy, keys, { jump, restartGame: restartHandler });
 
   // Draw background as a repeating pattern that fills the entire canvas width
   if (background.image && background.image.complete && background.image.naturalWidth) {
@@ -191,46 +203,49 @@ function animate() {
   shop.update(c);
   c.fillStyle = 'rgba(255, 255, 255, 0.15)';
   c.fillRect(0, 0, canvas.width, canvas.height);
-  player.update(c, canvas, GRAVITY);
-  enemy.update(c, canvas, GRAVITY);
 
-  player.stopHorizontal();
-  enemy.stopHorizontal();
+  if (!menuActive) {
+    player.update(c, canvas, GRAVITY);
+    enemy.update(c, canvas, GRAVITY);
 
-  // Player movment
-  if (keys.a.pressed && player.lastKey === 'a') {
-    player.moveLeft(5);
-    player.switchSprite('run');
-  } else if (keys.d.pressed && player.lastKey === 'd') {
-    player.moveRight(5);
-    player.switchSprite('run');
-  } else {
-    player.switchSprite('idle');
-  }
+    player.stopHorizontal();
+    enemy.stopHorizontal();
 
-  // Jump animation
-  if (player.velocity.y < 0) {
-    player.switchSprite('jump');
-  } else if (player.velocity.y > 0) {
-    player.switchSprite('fall');
-  }
+    // Player movment
+    if (keys.a.pressed && player.lastKey === 'a') {
+      player.moveLeft(5);
+      player.switchSprite('run');
+    } else if (keys.d.pressed && player.lastKey === 'd') {
+      player.moveRight(5);
+      player.switchSprite('run');
+    } else {
+      player.switchSprite('idle');
+    }
 
-  // Enemy movment
-  if (keys.ArrowLeft.pressed && enemy.lastKey === 'ArrowLeft') {
-    enemy.moveLeft(5);
-    enemy.switchSprite('run');
-  } else if (keys.ArrowRight.pressed && enemy.lastKey === 'ArrowRight') {
-    enemy.moveRight(5);
-    enemy.switchSprite('run');
-  } else {
-    enemy.switchSprite('idle');
-  }
+    // Jump animation
+    if (player.velocity.y < 0) {
+      player.switchSprite('jump');
+    } else if (player.velocity.y > 0) {
+      player.switchSprite('fall');
+    }
 
-  // Jump animation
-  if (enemy.velocity.y < 0) {
-    enemy.switchSprite('jump');
-  } else if (enemy.velocity.y > 0) {
-    enemy.switchSprite('fall');
+    // Enemy movment
+    if (keys.ArrowLeft.pressed && enemy.lastKey === 'ArrowLeft') {
+      enemy.moveLeft(5);
+      enemy.switchSprite('run');
+    } else if (keys.ArrowRight.pressed && enemy.lastKey === 'ArrowRight') {
+      enemy.moveRight(5);
+      enemy.switchSprite('run');
+    } else {
+      enemy.switchSprite('idle');
+    }
+
+    // Jump animation
+    if (enemy.velocity.y < 0) {
+      enemy.switchSprite('jump');
+    } else if (enemy.velocity.y > 0) {
+      enemy.switchSprite('fall');
+    }
   }
 
   // Detect for colission
