@@ -4,12 +4,11 @@ export function isMobile() {
   return (navigator.maxTouchPoints && navigator.maxTouchPoints > 0) || /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 }
 
+import { ActionButton } from '../ui/ActionButton.js';
+
 function createButton(id, text, className) {
-  const btn = document.createElement('button');
-  btn.id = id;
-  btn.className = `mobile-btn ${className || ''}`.trim();
-  btn.innerHTML = text;
-  return btn;
+  const btn = new ActionButton({ id, text, className });
+  return btn.el;
 }
 
 export function initMobileControls(keys = {}, callbacks = {}) {
@@ -26,8 +25,8 @@ export function initMobileControls(keys = {}, callbacks = {}) {
   const dpad = document.createElement('div');
   dpad.className = 'dpad-container';
 
-  const left = createButton('btn-left', '&larr;', 'dpad-btn');
-  const right = createButton('btn-right', '&rarr;', 'dpad-btn');
+  const left = createButton('btn-left', '←', 'dpad-btn');
+  const right = createButton('btn-right', '→', 'dpad-btn');
   dpad.appendChild(left);
   dpad.appendChild(right);
 

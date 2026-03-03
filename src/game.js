@@ -7,6 +7,7 @@ import { GRAVITY, START_POSITIONS } from './utils/constants.js';
 import { isMobile, initMobileControls } from './utils/mobile.js';
 import { alignSpriteToGround } from './utils/scale.js';
 import { initResponsiveCanvas } from './utils/responsive.js';
+import { GameInterface } from './ui/GameInterface.js';
 
 const canvas = document.querySelector("canvas");
 const c = canvas.getContext("2d");
@@ -86,6 +87,10 @@ alignSpriteToGround(enemy, canvas.height);
 shop.canvasHeight = canvas.height;
 alignSpriteToGround(shop, canvas.height);
 
+// UI: create interface (player/enemy health + timer)
+const gameInterface = new GameInterface('.interface');
+gameInterface.reset();
+
 const keys = {
   a: { pressed: false },
   d: { pressed: false },
@@ -139,11 +144,18 @@ if (isMobile()) {
   }
 }
 
-decrementTimer(() => whoWins(player, enemy));
+decrementTimer(() => {
+  const msg = whoWins(player, enemy);
+  try { gameInterface.winModal.show(msg, gameInterface.container.parentElement || document.body); } catch (e) {}
+}, (t) => gameInterface.timer.set(t));
 
 function animate() {
   window.requestAnimationFrame(animate);
-  handleGamepadInput(player, enemy, keys, { jump, restartGame });
+  // pass a restart handler wrapper so input code can call it with (player, enemy)
+  const restartHandler = (p, e) => {
+    try { window.restartGame(); } catch (err) { /* ignore */ }
+  };
+  handleGamepadInput(player, enemy, keys, { jump, restartGame: restartHandler });
 
   // Draw background as a repeating pattern that fills the entire canvas width
   if (background.image && background.image.complete && background.image.naturalWidth) {
@@ -222,19 +234,19 @@ function animate() {
   }
 
   // Detect for colission
-  if (
+    if (
     rectangularCollision({ rectangle1: player, rectangle2: enemy }) &&
     player.isAttacking &&
     player.framesCurrent === 4
   ) {
     player.isAttacking = false;
     enemy.takeHit(5);
-    document.querySelector('#enemyHealth').style.width = enemy.health + '%';
-
     if (window.gsap) {
-      gsap.to('#enemyHealth', { width: enemy.health + '%' });
+      gameInterface.enemyUI.update(enemy.health, true);
+    } else {
+      gameInterface.enemyUI.update(enemy.health, false);
     }
-  }
+    }
 
   // if player misses
   if (player.isAttacking && player.framesCurrent === 4) {
@@ -248,10 +260,10 @@ function animate() {
   ) {
     enemy.isAttacking = false;
     player.takeHit(5);
-    document.querySelector('#playerHealth').style.width = player.health + '%';
-
     if (window.gsap) {
-      gsap.to('#playerHealth', { width: player.health + '%' });
+      gameInterface.playerUI.update(player.health, true);
+    } else {
+      gameInterface.playerUI.update(player.health, false);
     }
   }
 
@@ -263,7 +275,8 @@ function animate() {
   // End game base on health
   if (player.health <= 0 || enemy.health <= 0) {
     if (typeof timer !== 'undefined' && timer === 0) return;
-    whoWins(player, enemy);
+    const msg = whoWins(player, enemy);
+    try { gameInterface.winModal.show(msg, gameInterface.container.parentElement || document.body); } catch (e) {}
   }
 }
 
@@ -349,4 +362,23 @@ window.addEventListener('keyup', (event) => {
 });
 
 // expose restartGame for the inline button in index.html
-window.restartGame = () => restartGame(player, enemy);
+window.restartGame = () => {
+  restartGame(player, enemy, (t) => gameInterface.timer.set(t), () => {
+    const msg = whoWins(player, enemy);
+    try { gameInterface.winModal.show(msg, gameInterface.container.parentElement || document.body); } catch (e) {}
+  });
+  try {
+    gameInterface.reset();
+    // remove the win modal from DOM if present
+    try { gameInterface.winModal.remove(); } catch (e) {}
+  } catch (e) {
+    // ignore if UI not available
+  }
+};
+
+// Bind the WinModal restart button to the global restart function once available
+try {
+  if (gameInterface && gameInterface.winModal) {
+    gameInterface.winModal.onRestart(() => window.restartGame());
+  }
+} catch (e) {}

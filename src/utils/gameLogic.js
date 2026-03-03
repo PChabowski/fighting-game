@@ -2,24 +2,18 @@ export let timer = 60;
 let stopTimer;
 
 export function whoWins(player, enemy) {
+    // Compute result string and stop the timer. UI should be handled by a component.
     clearTimeout(stopTimer);
-    const whoWin = document.querySelector('#whoWin');
-    const win = document.querySelector('#win');
-    whoWin.style.display = 'flex';
-    if (player.health === enemy.health) {
-        win.innerHTML = 'Tie';
-    } else if (player.health > enemy.health) {
-        win.innerHTML = 'Player 1 Wins';
-    } else if (player.health < enemy.health) {
-        win.innerHTML = 'Player 2 Wins';
-    }
+    if (player.health === enemy.health) return 'Tie';
+    if (player.health > enemy.health) return 'Player 1 Wins';
+    return 'Player 2 Wins';
 }
 
-export function decrementTimer(onEnd) {
+export function decrementTimer(onEnd, onTick) {
     if (timer > 0) {
-        stopTimer = setTimeout(() => decrementTimer(onEnd), 1000);
+        stopTimer = setTimeout(() => decrementTimer(onEnd, onTick), 1000);
         timer--;
-        document.querySelector('#timer').innerHTML = timer;
+        if (typeof onTick === 'function') onTick(timer);
     }
     if (timer === 0 && typeof onEnd === 'function') {
         onEnd();
@@ -32,14 +26,11 @@ export function jump(player) {
     }
 }
 
-export function restartGame(player, enemy) {
-    document.querySelector('#whoWin').style.display = 'none';
+export function restartGame(player, enemy, onTick, onEnd) {
     timer = 60;
-    decrementTimer(() => whoWins(player, enemy));
+    decrementTimer(onEnd || (() => {}), onTick);
     
     if (typeof player.restart === 'function') player.restart({ x: 200, y: 330 });
     if (typeof enemy.restart === 'function') enemy.restart({ x: 700, y: 330 });
 
-    document.querySelector('#playerHealth').style.width = '100%';
-    document.querySelector('#enemyHealth').style.width = '100%';
 }

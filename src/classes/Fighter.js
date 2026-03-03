@@ -104,12 +104,10 @@ export class Fighter extends Sprite {
     // Input-facing methods: allow external input handlers to control the fighter
     moveLeft(speed = 5) {
         this.velocity.x = -Math.abs(speed);
-        this.lastKey = 'a';
     }
 
     moveRight(speed = 5) {
         this.velocity.x = Math.abs(speed);
-        this.lastKey = 'd';
     }
 
     stopHorizontal() {

@@ -115,7 +115,7 @@ canvas {
   color: white;
   font-weight: bold;
   cursor: pointer;
-  border-radius: 50%;
+  border-radius: 12px;
   transition: all 0.1s ease;
   touch-action: none;
   font-family: "Press Start 2P", system-ui;
@@ -152,6 +152,7 @@ canvas {
   display: flex;
   align-items: center;
   justify-content: center;
+  white-space: nowrap;
 }
 
 .jump-btn {
