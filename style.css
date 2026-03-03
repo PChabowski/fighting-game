@@ -6,8 +6,16 @@ body {
   background-color: #2e2e2e;
 }
 .conteiner {
-  display: inline-block;
+  width: 100%;
+  display: flex;
+  justify-content: center;
   position: relative;
+}
+
+canvas {
+  display: block;
+  /* allow canvas to take its intrinsic pixel size, but keep it centered */
+  max-width: 100%;
 }
 .interface {
   align-items: center;
@@ -69,4 +77,146 @@ body {
   border: 3px solid;
   padding: 10px;
   cursor: pointer;
+}
+
+/* ============ MOBILE CONTROLS ============ */
+.mobile-controls-container {
+  display: flex; /* kontrolowane przez skrypt */
+  position: fixed;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+  left: 15px;
+  right: 15px;
+  z-index: 100;
+  pointer-events: auto;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* kontener dla przycisków skok + atak */
+.action-buttons {
+  display: flex;
+  gap: 10px;
+  pointer-events: auto;
+  /* default layout puts buttons horizontally on larger screens */
+}
+
+
+/* D-PAD Container */
+.dpad-container {
+  display: flex;
+  gap: 20px;
+  pointer-events: auto;
+}
+
+/* Mobile Button Base */
+.mobile-btn {
+  border: 3px solid #fff;
+  background-color: rgba(100, 100, 100, 0.6);
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  border-radius: 50%;
+  transition: all 0.1s ease;
+  touch-action: none;
+  font-family: "Press Start 2P", system-ui;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  overflow: visible;
+}
+
+.mobile-btn:active,
+.mobile-btn.active {
+  transform: scale(0.97);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.7);
+}
+
+/* D-PAD Buttons */
+.dpad-btn {
+  font-size: 36px;
+  pointer-events: auto;
+}
+
+/* Action Buttons (Jump & Attack) */
+.action-btn {
+  min-width: 14px;
+  padding: 12px;
+  box-sizing: border-box;
+  font-size: 24px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  pointer-events: auto;
+  line-height: 1.1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.jump-btn {
+  background-color: rgba(255, 220, 0, 0.85);
+}
+
+.jump-btn:active,
+.jump-btn.active {
+  background-color: rgba(255, 220, 0, 1);
+  color: #000;
+}
+
+.attack-btn {
+  background-color: rgba(50, 130, 200, 0.8);
+}
+
+.attack-btn:active,
+.attack-btn.active {
+  background-color: rgba(50, 130, 200, 1);
+  color: #fff;
+}
+
+/* Responsywność dla bardziej mobilnych urządzeń */
+@media (max-width: 600px) {
+  .mobile-btn {
+    font-size: 16px;
+    min-width: 80px;
+    min-height: 64px;
+  }
+
+  .dpad-btn {
+    width: 80px;
+    height: 80px;
+    font-size: 28px;
+  }
+
+  .action-btn {
+    min-width: 80px;
+    min-height: 64px;
+    font-size: 18px;
+    margin: 0 8px;
+    padding: 0 12px;
+  }
+
+  /* nadal wypozycjonowanie zachowane przez JS, tylko marginesy modyfikowane */
+  .mobile-controls-container {
+    margin: 20px 10px 60px;
+    /* Stack left/right controls vertically on narrow screens to avoid overlap */
+    flex-direction: row;
+  }
+
+  .dpad-container {
+    gap: 12px;
+    flex-direction: row;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+    gap: 12px;
+  }
+}
+
+/* Larger mobile landscape: provide more spacing */
+@media (max-width: 900px) and (orientation: landscape) {
+  .mobile-btn { width: 64px; height: 64px; }
+  .action-buttons { gap: 10px; }
+  .dpad-container { gap: 10px; }
 }

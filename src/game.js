@@ -4,12 +4,25 @@ import { rectangularCollision } from './utils/collision.js';
 import { decrementTimer, whoWins, jump, restartGame } from './utils/gameLogic.js';
 import { handleGamepadInput } from './utils/input.js';
 import { GRAVITY, START_POSITIONS } from './utils/constants.js';
+import { isMobile, initMobileControls } from './utils/mobile.js';
+import { alignSpriteToGround } from './utils/scale.js';
+import { initResponsiveCanvas } from './utils/responsive.js';
 
 const canvas = document.querySelector("canvas");
 const c = canvas.getContext("2d");
 
-canvas.width = 1024;
-canvas.height = 576;
+// Initialize responsive canvas (fixed internal resolution, CSS-scaled)
+initResponsiveCanvas(canvas);
+
+// Ensure sprites align to the ground line using internal canvas height
+// (we rely on CSS scaling for display so internal resolution is stable)
+window.addEventListener('resize', () => {
+  // re-run CSS resize handled by initResponsiveCanvas and re-align sprites
+  alignSpriteToGround(player, canvas.height);
+  alignSpriteToGround(enemy, canvas.height);
+  shop.canvasHeight = canvas.height;
+  alignSpriteToGround(shop, canvas.height);
+});
 
 c.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -24,6 +37,9 @@ const shop = new Sprite({
   scale: 2.5,
   frameMax: 6,
 });
+// store base properties for responsive adjustments
+shop.basePosition = { x: 650, y: 160 };
+shop.baseScale = 2.5;
 
 const player = new Fighter({
   position: START_POSITIONS.player,
@@ -64,6 +80,12 @@ const enemy = new Fighter({
   attackBox: { offset: { x: 83, y: 50 }, width: 160, height: 50 },
 });
 
+// After creating scene objects, align them to the ground using internal canvas size
+alignSpriteToGround(player, canvas.height);
+alignSpriteToGround(enemy, canvas.height);
+shop.canvasHeight = canvas.height;
+alignSpriteToGround(shop, canvas.height);
+
 const keys = {
   a: { pressed: false },
   d: { pressed: false },
@@ -75,31 +97,100 @@ const keys = {
   ArrowDown: { pressed: false },
 };
 
+// Inicjalizacja kontroli mobilnych
+const mobileControls = initMobileControls(keys, {
+  jump: () => {
+    if (!player.dead) {
+      jump(player);
+    }
+  },
+  attack: () => {
+    if (!player.dead) {
+      player.attack();
+    }
+  },
+  attackRelease: () => {
+    // zwalniamy możliwość ataku przy zwolnieniu przycisku dotykowego
+    player.canAttack = true;
+  }
+});
+
+// Ustawienie lastKey dla mobilnego d-pad'u
+if (isMobile()) {
+  const leftBtn = document.getElementById('btn-left');
+  const rightBtn = document.getElementById('btn-right');
+  
+  if (leftBtn) {
+    leftBtn.addEventListener('touchstart', () => {
+      player.lastKey = 'a';
+    });
+    leftBtn.addEventListener('mousedown', () => {
+      player.lastKey = 'a';
+    });
+  }
+  
+  if (rightBtn) {
+    rightBtn.addEventListener('touchstart', () => {
+      player.lastKey = 'd';
+    });
+    rightBtn.addEventListener('mousedown', () => {
+      player.lastKey = 'd';
+    });
+  }
+}
+
 decrementTimer(() => whoWins(player, enemy));
 
 function animate() {
   window.requestAnimationFrame(animate);
-  c.fillStyle = 'black';
-  c.fillRect(0, 0, canvas.width, canvas.height);
-
   handleGamepadInput(player, enemy, keys, { jump, restartGame });
 
-  background.update(c);
+  // Draw background as a repeating pattern that fills the entire canvas width
+  if (background.image && background.image.complete && background.image.naturalWidth) {
+    // Scale background to fully fill canvas height, tile horizontally (repeat-x)
+    const img = background.image;
+    const scale = canvas.height / img.height;
+    const scaledWidth = Math.round(img.width * scale);
+
+    // Guard against zero width
+    if (scaledWidth > 0) {
+      for (let x = 0; x < canvas.width; x += scaledWidth) {
+        c.drawImage(
+          img,
+          0,
+          0,
+          img.width,
+          img.height,
+          x,
+          0,
+          scaledWidth,
+          canvas.height
+        );
+      }
+    } else {
+      c.fillStyle = 'black';
+      c.fillRect(0, 0, canvas.width, canvas.height);
+    }
+  } else {
+    c.fillStyle = 'black';
+    c.fillRect(0, 0, canvas.width, canvas.height);
+  }
+
   shop.update(c);
   c.fillStyle = 'rgba(255, 255, 255, 0.15)';
   c.fillRect(0, 0, canvas.width, canvas.height);
   player.update(c, canvas, GRAVITY);
   enemy.update(c, canvas, GRAVITY);
 
-  player.velocity.x = 0;
-  enemy.velocity.x = 0;
+  player.stopHorizontal();
+  enemy.stopHorizontal();
 
   // Player movment
   if (keys.a.pressed && player.lastKey === 'a') {
-    player.velocity.x = -5;
+    player.moveLeft(5);
     player.switchSprite('run');
   } else if (keys.d.pressed && player.lastKey === 'd') {
-    player.velocity.x = 5;
+    player.moveRight(5);
     player.switchSprite('run');
   } else {
     player.switchSprite('idle');
@@ -114,10 +205,10 @@ function animate() {
 
   // Enemy movment
   if (keys.ArrowLeft.pressed && enemy.lastKey === 'ArrowLeft') {
-    enemy.velocity.x = -5;
+    enemy.moveLeft(5);
     enemy.switchSprite('run');
   } else if (keys.ArrowRight.pressed && enemy.lastKey === 'ArrowRight') {
-    enemy.velocity.x = 5;
+    enemy.moveRight(5);
     enemy.switchSprite('run');
   } else {
     enemy.switchSprite('idle');

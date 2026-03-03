@@ -21,9 +21,12 @@ export class Fighter extends Sprite {
         });
 
         this.velocity = velocity;
-        this.width = 50;
-        this.height = 150;
+        this.baseWidth = 50;
+        this.baseHeight = 150;
+        this.width = this.baseWidth;
+        this.height = this.baseHeight;
         this.lastKey;
+
         this.attackBox = {
             position: {
                 x: this.position.x,
@@ -48,6 +51,11 @@ export class Fighter extends Sprite {
             const normalized = (this.sprites[sprite].imageSrc || '').replace(/^\.\/img\//, '../assets/images/');
             this.sprites[sprite].image.src = normalized;
         }
+        // store base values for responsive scaling
+        this.basePosition = { ...(position || {}) };
+        this.baseOffset = { ...(offset || {}) };
+        this.baseAttackBoxOffset = { ...(attackBox.offset || {}) };
+        this.baseScale = scale;
     }
 
     restart(startPosition) {
@@ -83,12 +91,61 @@ export class Fighter extends Sprite {
         this.position.x += this.velocity.x;
         this.position.y += this.velocity.y;
 
-        if (this.position.y + this.height + this.velocity.y >= canvas.height - 96) {
+        const groundY = canvas.height - 96;
+        if (this.position.y + this.height + this.velocity.y >= groundY) {
             this.velocity.y = 0;
-            this.position.y = 330;
+            // place the fighter standing on the ground (respecting its height)
+            this.position.y = groundY - this.height;
         } else {
             this.velocity.y += gravity;
         }
+    }
+
+    // Input-facing methods: allow external input handlers to control the fighter
+    moveLeft(speed = 5) {
+        this.velocity.x = -Math.abs(speed);
+        this.lastKey = 'a';
+    }
+
+    moveRight(speed = 5) {
+        this.velocity.x = Math.abs(speed);
+        this.lastKey = 'd';
+    }
+
+    stopHorizontal() {
+        this.velocity.x = 0;
+    }
+
+    // Return a plain object representing the state needed for networking sync
+    getState() {
+        return {
+            position: { x: this.position.x, y: this.position.y },
+            velocity: { x: this.velocity.x, y: this.velocity.y },
+            // figure out current sprite name from image reference (best-effort)
+            currentAnimation: Object.keys(this.sprites).find(k => this.sprites[k].image === this.image) || null,
+            framesCurrent: this.framesCurrent,
+            health: this.health,
+            dead: this.dead
+        };
+    }
+
+    // Apply a remote or serialized state onto this fighter (non-destructive for other props)
+    setState(data = {}) {
+        if (data.position) {
+            this.position.x = data.position.x;
+            this.position.y = data.position.y;
+        }
+        if (data.velocity) {
+            this.velocity.x = data.velocity.x;
+            this.velocity.y = data.velocity.y;
+        }
+        if (data.currentAnimation && this.sprites && this.sprites[data.currentAnimation]) {
+            this.switchSprite(data.currentAnimation);
+            // try to apply frame index if provided
+            if (typeof data.framesCurrent === 'number') this.framesCurrent = data.framesCurrent;
+        }
+        if (typeof data.health === 'number') this.health = data.health;
+        if (typeof data.dead === 'boolean') this.dead = data.dead;
     }
 
     attack() {
@@ -183,4 +240,6 @@ export class Fighter extends Sprite {
                 break;
         }
     }
+    
+    
 }
