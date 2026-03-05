@@ -4,6 +4,7 @@
 }
 body {
   background-color: #2e2e2e;
+  overflow: hidden;
 }
 .conteiner {
   width: 100%;
@@ -81,6 +82,64 @@ canvas {
   padding: 10px;
   cursor: pointer;
 }
+
+.menu-button { width: 320px; text-align: center; }
+
+/* Character select styles */
+.roster-wrap {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.avatar-btn {
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+.avatar-btn img {
+  display: block;
+  border-radius: 6px;
+}
+.avatar-btn img {
+  transition: transform 0.12s ease, outline 0.12s ease;
+}
+.avatar-selected-player1 img {
+  outline: 4px solid #1e90ff; /* blue */
+  outline-offset: 4px;
+}
+.avatar-selected-player2 img {
+  outline: 4px solid #ff3333; /* red */
+  outline-offset: 4px;
+}
+.avatar-selected-both img {
+  outline: 4px solid #ff8c00; /* orange */
+  outline-offset: 4px;
+}
+
+/* Gamepad focus (selected by pad) */
+.gp-focused {
+  color: #ff8c00;
+  border-color: #ff8c00 !important;
+}
+.avatar-gp-focused img {
+  outline: 4px solid #ff8c00;
+  outline-offset: 4px;
+}
+.avatar-pointer-p1 img {
+  outline: 4px solid #1e90ff; /* blue pointer for player1 */
+  outline-offset: 4px;
+}
+.avatar-pointer-p2 img {
+  outline: 4px solid #ff3333; /* red pointer for player2 */
+  outline-offset: 4px;
+}
+.select-box {
+  padding: 8px;
+  margin-bottom: 8px;
+  min-width: 160px;
+  text-align: center;
+}
+.char-actions { display: flex; gap: 12px; margin-top: 12px; }
 
 /* ============ MOBILE CONTROLS ============ */
 .mobile-controls-container {
@@ -223,4 +282,22 @@ canvas {
   .mobile-btn { width: 64px; height: 64px; }
   .action-buttons { gap: 10px; }
   .dpad-container { gap: 10px; }
+}
+
+/* Hover styles for desktop (only on devices that support hover) */
+@media (hover: hover) and (pointer: fine) {
+  .button:hover,
+  .menu-button:hover {
+    color: #ff8c00;
+    border-color: #ff8c00;
+    transform: scale(1.02);
+  }
+
+  .avatar-btn:hover img {
+    outline: 4px solid #ff8c00;
+    outline-offset: 4px;
+    transform: translateY(-4px);
+  }
+
+  .avatar-btn:hover { cursor: pointer; }
 }
