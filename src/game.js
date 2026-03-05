@@ -3,7 +3,7 @@ import { Fighter } from './classes/Fighter.js';
 import { rectangularCollision } from './utils/collision.js';
 import { decrementTimer, whoWins, jump, restartGame, timer } from './utils/gameLogic.js';
 import { handleGamepadInput, initGamepadMenu } from './utils/input.js';
-import { GRAVITY, START_POSITIONS } from './utils/constants.js';
+import { GRAVITY, START_POSITIONS, APP_VERSION } from './utils/constants.js';
 import { isMobile, initMobileControls } from './utils/mobile.js';
 import { CharacterSelect } from './ui/CharacterSelect.js';
 import { alignSpriteToGround } from './utils/scale.js';
@@ -315,6 +315,21 @@ function animate() {
       try { gameInterface.winModal.show(msg, gameInterface.container.parentElement || document.body); } catch (e) {}
     }
   }
+
+    // Render app version in bottom-left corner (logical resolution-aware)
+    try {
+      c.save();
+      // Prefer 'Press Start 2P' if available, fallback to Arial
+      c.font = '10px "Press Start 2P", Arial';
+      c.textBaseline = 'bottom';
+      c.fillStyle = 'rgba(255, 255, 255, 0.5)';
+      const verText = `v${APP_VERSION.version} (${APP_VERSION.branch})`;
+      // margin from logical canvas edges
+      const x = 10;
+      const y = canvas.height - 10;
+      c.fillText(verText, x, y);
+      c.restore();
+    } catch (e) {}
 }
 
 animate();
