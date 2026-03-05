@@ -122,9 +122,8 @@ export class CharacterSelect {
       this.remove();
     });
 
-    // Gamepad focusable list (order: player box, enemy box, roster..., start, back)
+    // Gamepad focusable list (order: roster..., start, back)
     this._buildFocusables();
-    this._updateGpFocus();
 
     // Gamepad handlers
     this._onGpUp = (e) => this._moveGpFocus(-1, e && e.detail && e.detail.index);
@@ -321,6 +320,15 @@ export class CharacterSelect {
   show(parent = document.body) {
     if (!this.el.parentElement) parent.appendChild(this.el);
     this.el.style.display = 'flex';
+    // apply initial gp focus only if a gamepad is connected
+    try {
+      const hasPad = navigator.getGamepads ? Array.from(navigator.getGamepads()).some(g => !!g) : false;
+      if (hasPad) this._updateGpFocus();
+      else {
+        // clear any gp-focused classes so hover works
+        if (this.focusables) this.focusables.forEach(el => { if (el) el.classList.remove('gp-focused', 'avatar-gp-focused'); });
+      }
+    } catch (e) {}
   }
 
   onConfirm(cb) {

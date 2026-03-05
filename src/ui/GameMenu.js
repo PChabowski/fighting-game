@@ -19,10 +19,9 @@ export class GameMenu {
     this.btnPvp.textContent = 'Player vs Player';
     this.el.appendChild(this.btnPvp);
 
-    // gamepad focus state
+    // gamepad focus state (do not apply focus until we know if a pad is connected)
     this.focusIndex = 0;
     this.focusables = [this.btnArcade, this.btnPvp];
-    this._updateFocus();
 
     // bind gamepad events
     this._onGpUp = () => this._moveFocus(-1);
@@ -68,7 +67,10 @@ export class GameMenu {
         document.addEventListener('gp-confirm', this._onGpConfirm);
         document.addEventListener('gp-back', this._onGpBack);
         this._gpBound = true;
-        this._updateFocus();
+        // apply initial focus only if a gamepad is connected; otherwise clear any gp-focused classes
+        const hasPad = navigator.getGamepads ? Array.from(navigator.getGamepads()).some(g => !!g) : false;
+        if (hasPad) this._updateFocus();
+        else this.focusables.forEach(el => el.classList.remove('gp-focused'));
       }
     } catch (e) {}
   }

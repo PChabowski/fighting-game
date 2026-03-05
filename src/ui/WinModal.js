@@ -58,7 +58,7 @@ export class WinModal {
     this.el.style.display = 'flex';
     this.el.style.flexDirection = 'column';
     this.el.style.gap = '12px';
-    // bind gp listeners while modal visible
+    // bind gp listeners while modal visible and only show initial focus when a pad is connected
     try {
       document.addEventListener('gp-up', this._onGpUp);
       document.addEventListener('gp-down', this._onGpDown);
@@ -66,7 +66,9 @@ export class WinModal {
       document.addEventListener('gp-right', this._onGpRight);
       document.addEventListener('gp-confirm', this._onGpConfirm);
       document.addEventListener('gp-back', this._onGpBack);
-      this._updateFocus();
+      const hasPad = navigator.getGamepads ? Array.from(navigator.getGamepads()).some(g => !!g) : false;
+      if (hasPad) this._updateFocus();
+      else this.focusables.forEach(el => el.classList.remove('gp-focused'));
     } catch (e) {}
   }
 
