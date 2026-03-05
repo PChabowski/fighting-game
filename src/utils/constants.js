@@ -7,6 +7,6 @@ export const START_POSITIONS = {
 
 export const APP_VERSION = {
   version: '1.1.0',
-  branch: 'fix-control',
+  branch: 'update',
   lastUpdate: '2026-03-05'
 };
