@@ -421,10 +421,10 @@ function animate() {
 
     if (!isMultiplayer) {
         // PvP / Arcade
-        if (keys.a.pressed && player.lastKey === 'a') {
+        if (keys.a.pressed && player.lastKey === 'a' && !player.dead) {
             player.moveLeft(5);
             player.switchSprite('run');
-        } else if (keys.d.pressed && player.lastKey === 'd') {
+        } else if (keys.d.pressed && player.lastKey === 'd' && !player.dead) {
             player.moveRight(5);
             player.switchSprite('run');
         } else {
@@ -432,17 +432,17 @@ function animate() {
         }
 
         // Jump animation
-        if (player.velocity.y < 0) {
+        if (player.velocity.y < 0 && !player.dead) {
             player.switchSprite('jump');
-        } else if (player.velocity.y > 0) {
+        } else if (player.velocity.y > 0 && !player.dead) {
             player.switchSprite('fall');
         }
 
         // Enemy movment
-        if (keys.ArrowLeft.pressed && enemy.lastKey === 'ArrowLeft') {
+        if (keys.ArrowLeft.pressed && enemy.lastKey === 'ArrowLeft' && !enemy.dead) {
             enemy.moveLeft(5);
             enemy.switchSprite('run');
-        } else if (keys.ArrowRight.pressed && enemy.lastKey === 'ArrowRight') {
+        } else if (keys.ArrowRight.pressed && enemy.lastKey === 'ArrowRight' && !enemy.dead) {
             enemy.moveRight(5);
             enemy.switchSprite('run');
         } else {
@@ -450,26 +450,26 @@ function animate() {
         }
 
         // Jump animation
-        if (enemy.velocity.y < 0) {
+        if (enemy.velocity.y < 0 && !enemy.dead) {
             enemy.switchSprite('jump');
-        } else if (enemy.velocity.y > 0) {
+        } else if (enemy.velocity.y > 0 && !enemy.dead) {
             enemy.switchSprite('fall');
         }
     } else {
         // Multiplayer: Both players use WSAD + Space for their locally controlled fighter
-        if (keys.a.pressed && localFighter.lastKey === 'a') {
+        if (keys.a.pressed && localFighter.lastKey === 'a' && !localFighter.dead) {
             localFighter.moveLeft(5);
             localFighter.switchSprite('run');
-        } else if (keys.d.pressed && localFighter.lastKey === 'd') {
+        } else if (keys.d.pressed && localFighter.lastKey === 'd' && !localFighter.dead) {
             localFighter.moveRight(5);
             localFighter.switchSprite('run');
         } else {
             localFighter.switchSprite('idle');
         }
 
-        if (localFighter.velocity.y < 0) {
+        if (localFighter.velocity.y < 0 && !localFighter.dead) {
             localFighter.switchSprite('jump');
-        } else if (localFighter.velocity.y > 0) {
+        } else if (localFighter.velocity.y > 0 && !localFighter.dead) {
             localFighter.switchSprite('fall');
         }
     }
