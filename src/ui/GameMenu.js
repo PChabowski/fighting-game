@@ -19,9 +19,14 @@ export class GameMenu {
     this.btnPvp.textContent = 'Player vs Player';
     this.el.appendChild(this.btnPvp);
 
+    this.btnMultiplayer = document.createElement('button');
+    this.btnMultiplayer.className = 'button menu-button';
+    this.btnMultiplayer.textContent = 'Multiplayer';
+    this.el.appendChild(this.btnMultiplayer);
+
     // gamepad focus state (do not apply focus until we know if a pad is connected)
     this.focusIndex = 0;
-    this.focusables = [this.btnArcade, this.btnPvp];
+    this.focusables = [this.btnArcade, this.btnPvp, this.btnMultiplayer];
 
     // bind gamepad events
     this._onGpUp = () => this._moveFocus(-1);
@@ -79,6 +84,7 @@ export class GameMenu {
     if (typeof cb !== 'function') return;
     this.btnPvp.addEventListener('click', (e) => { try { this.remove(); } catch (err) {} try { cb('pvp'); } catch (err) {} });
     this.btnArcade.addEventListener('click', (e) => { try { this.remove(); } catch (err) {} try { cb('arcade'); } catch (err) {} });
+    this.btnMultiplayer.addEventListener('click', (e) => { try { this.remove(); } catch (err) {} try { cb('multiplayer'); } catch (err) {} });
   }
 
   remove() {

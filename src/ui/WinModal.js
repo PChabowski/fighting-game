@@ -1,114 +1,39 @@
 export class WinModal {
-  constructor() {
-    // create modal element but do NOT append to DOM yet
-    this.el = document.createElement('div');
-    this.el.id = 'whoWin';
-    this.el.className = 'who-win';
-
-    this.messageEl = document.createElement('div');
-    this.messageEl.id = 'win';
-    this.el.appendChild(this.messageEl);
-
-    // Rematch button
-    this.rematchBtn = document.createElement('button');
-    this.rematchBtn.className = 'button menu-button';
-    this.rematchBtn.id = 'rematch';
-    this.rematchBtn.textContent = 'Rematch';
-    this.el.appendChild(this.rematchBtn);
-
-    // Return to menu button
-    this.returnBtn = document.createElement('button');
-    this.returnBtn.className = 'button menu-button';
-    this.returnBtn.id = 'returnToMenu';
-    this.returnBtn.textContent = 'Return to Menu';
-    this.el.appendChild(this.returnBtn);
-    // gamepad focus state
-    this.focusIndex = 0;
-    this.focusables = [this.rematchBtn, this.returnBtn];
-    this._updateFocus = () => {
-      this.focusables.forEach((el, i) => {
-        if (i === this.focusIndex) el.classList.add('gp-focused');
-        else el.classList.remove('gp-focused');
-      });
-    };
-
-    this._moveFocus = (delta) => {
-      const len = this.focusables.length;
-      if (!len) return;
-      this.focusIndex = (this.focusIndex + delta + len) % len;
-      this._updateFocus();
-    };
-
-    // gp listeners will be attached when modal is shown so they are active only while visible
-    this._onGpUp = (e) => this._moveFocus(-1, e && e.detail && e.detail.index);
-    this._onGpDown = (e) => this._moveFocus(1, e && e.detail && e.detail.index);
-    this._onGpLeft = (e) => this._moveFocus(-1, e && e.detail && e.detail.index);
-    this._onGpRight = (e) => this._moveFocus(1, e && e.detail && e.detail.index);
-    this._onGpConfirm = (e) => { const el = this.focusables[this.focusIndex]; if (el) el.click(); };
-    this._onGpBack = (e) => { const el = this.returnBtn; if (el) el.click(); };
-  }
-
-  show(text, parent = document.body) {
-    // Only set the winner text once to avoid repeated writes
-    // (the game loop may call show() multiple times at end of round)
-    if (text && !this.messageEl.innerHTML) {
-      this.messageEl.innerHTML = text;
+    constructor(onRestart) {
+        this.onRestart = onRestart;
+        this.element = null;
     }
-    if (!this.el.parentElement) parent.appendChild(this.el);
-    this.el.style.display = 'flex';
-    this.el.style.flexDirection = 'column';
-    this.el.style.gap = '12px';
-    // bind gp listeners while modal visible and only show initial focus when a pad is connected
-    try {
-      document.addEventListener('gp-up', this._onGpUp);
-      document.addEventListener('gp-down', this._onGpDown);
-      document.addEventListener('gp-left', this._onGpLeft);
-      document.addEventListener('gp-right', this._onGpRight);
-      document.addEventListener('gp-confirm', this._onGpConfirm);
-      document.addEventListener('gp-back', this._onGpBack);
-      const hasPad = navigator.getGamepads ? Array.from(navigator.getGamepads()).some(g => !!g) : false;
-      if (hasPad) this._updateFocus();
-      else this.focusables.forEach(el => el.classList.remove('gp-focused'));
-    } catch (e) {}
-  }
 
-  hide() {
-    if (this.el && this.el.style) this.el.style.display = 'none';
-  }
+    show(message, container = document.body) {
+        if (this.element) this.element.remove();
 
-  onRestart(cb) {
-    if (typeof cb !== 'function') return;
-    // Backwards-compatible: map to rematch
-    this.onRematch(cb);
-  }
+        this.element = document.createElement('div');
+        this.element.className = 'who-win';
+        this.element.style.display = 'flex';
+        this.element.style.zIndex = '1000';
+        this.element.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
 
-  onRematch(cb) {
-    if (typeof cb !== 'function') return;
-    this.rematchBtn.addEventListener('click', (e) => {
-      try { cb(e); } catch (err) {}
-      this.remove();
-    });
-  }
+        const text = document.createElement('div');
+        text.innerHTML = message;
+        this.element.appendChild(text);
 
-  onReturnToMenu(cb) {
-    if (typeof cb !== 'function') return;
-    this.returnBtn.addEventListener('click', (e) => {
-      try { cb(e); } catch (err) {}
-      this.remove();
-    });
-  }
+        const restartBtn = document.createElement('button');
+        restartBtn.className = 'button restart-btn';
+        restartBtn.textContent = 'RESTART';
+        restartBtn.style.marginTop = '20px';
+        restartBtn.addEventListener('click', () => {
+            if (this.onRestart) this.onRestart();
+            else location.reload();
+        });
+        this.element.appendChild(restartBtn);
 
-  remove() {
-    // clear stored message so next match can set a new winner text
-    try { this.messageEl.innerHTML = ''; } catch (e) {}
-    if (this.el && this.el.parentElement) this.el.parentElement.removeChild(this.el);
-    try {
-      document.removeEventListener('gp-up', this._onGpUp);
-      document.removeEventListener('gp-down', this._onGpDown);
-      document.removeEventListener('gp-left', this._onGpLeft);
-      document.removeEventListener('gp-right', this._onGpRight);
-      document.removeEventListener('gp-confirm', this._onGpConfirm);
-      document.removeEventListener('gp-back', this._onGpBack);
-    } catch (e) {}
-  }
+        container.appendChild(this.element);
+    }
+
+    hide() {
+        if (this.element) {
+            this.element.remove();
+            this.element = null;
+        }
+    }
 }

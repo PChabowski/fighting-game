@@ -1,0 +1,43 @@
+export const ROSTER = {
+    Mack: {
+        id: 'Mack',
+        name: 'Mack',
+        position: { x: 200, y: 330 },
+        velocity: { x: 0, y: 0 },
+        imageSrc: '../assets/images/Mack/Idle.png',
+        scale: 2.5,
+        frameMax: 8,
+        offset: { x: 215, y: 155 },
+        sprites: {
+            idle: { imageSrc: '../assets/images/Mack/Idle.png', frameMax: 8 },
+            run: { imageSrc: '../assets/images/Mack/Run.png', frameMax: 8 },
+            jump: { imageSrc: '../assets/images/Mack/Jump.png', frameMax: 2 },
+            fall: { imageSrc: '../assets/images/Mack/Fall.png', frameMax: 2 },
+            attack: { imageSrc: '../assets/images/Mack/Attack1.png', frameMax: 6 },
+            takeHit: { imageSrc: '../assets/images/Mack/Take Hit - white silhouette.png', frameMax: 4 },
+            death: { imageSrc: '../assets/images/Mack/Death.png', frameMax: 6 },
+        },
+        attackBox: { offset: { x: 100, y: 50 }, width: 160, height: 50 },
+    },
+    Kenji: {
+        id: 'Kenji',
+        name: 'Kenji',
+        position: { x: 700, y: 330 },
+        velocity: { x: 0, y: 0 },
+        color: 'yellow',
+        imageSrc: '../assets/images/Kenji/Idle.png',
+        scale: 2.5,
+        frameMax: 4,
+        offset: { x: 215, y: 170 },
+        sprites: {
+            idle: { imageSrc: '../assets/images/Kenji/Idle.png', frameMax: 4 },
+            run: { imageSrc: '../assets/images/Kenji/Run.png', frameMax: 8 },
+            jump: { imageSrc: '../assets/images/Kenji/Jump.png', frameMax: 2 },
+            fall: { imageSrc: '../assets/images/Kenji/Fall.png', frameMax: 2 },
+            attack: { imageSrc: '../assets/images/Kenji/Attack1.png', frameMax: 4 },
+            takeHit: { imageSrc: '../assets/images/Kenji/Take hit.png', frameMax: 3 },
+            death: { imageSrc: '../assets/images/Kenji/Death.png', frameMax: 7 },
+        },
+        attackBox: { offset: { x: 83, y: 50 }, width: 160, height: 50 },
+    }
+};

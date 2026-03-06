@@ -11,6 +11,11 @@ import { initResponsiveCanvas } from './utils/responsive.js';
 import { GameInterface } from './ui/GameInterface.js';
 import { GameMenu } from './ui/GameMenu.js';
 import { MobileOrientationModal } from './ui/MobileOrientationModal.js';
+import { MultiplayerMenu } from './ui/MultiplayerMenu.js';
+import { JoinMenu } from './ui/JoinMenu.js';
+import { MultiplayerLobby } from './ui/MultiplayerLobby.js';
+import { peerManager } from './utils/peer.js';
+import { NetworkFighter } from './classes/NetworkFighter.js';
 
 const canvas = document.querySelector("canvas");
 const c = canvas.getContext("2d");
@@ -45,8 +50,12 @@ const shop = new Sprite({
 shop.basePosition = { x: 650, y: 160 };
 shop.baseScale = 2.5;
 
+import { ROSTER } from './utils/roster.js';
+
 let player = null;
 let enemy = null;
+let isMultiplayer = false;
+let isHost = false;
 
 // shop alignment
 shop.canvasHeight = canvas.height;
@@ -74,6 +83,98 @@ gameInterface.container.classList.add('hidden');
 
 // When a mode is selected, show character select then initialize fighters
 gameMenu.onModeSelect((mode) => {
+  if (mode === 'multiplayer') {
+      const multiMenu = new MultiplayerMenu();
+      multiMenu.show(gameInterface.container.parentElement || document.body);
+      multiMenu.onSelect((type) => {
+          multiMenu.hide();
+          if (type === 'back') {
+              gameMenu.show();
+          } else if (type === 'host') {
+              isHost = true;
+              isMultiplayer = true;
+              peerManager.initHost();
+              const lobby = new MultiplayerLobby(true);
+              peerManager.onOpen((id) => {
+                  lobby.setPeerId(id);
+                  lobby.setConnected(false);
+              });
+              lobby.show();
+              
+              peerManager.onConnection(() => {
+                  lobby.setConnected(true);
+              });
+              
+              peerManager.onData((data) => {
+                  if (data.type === 'select') {
+                      lobby.setRemoteSelection(data.characterId);
+                  } else if (data.type === 'start') {
+                      // Guest receives start signal from Host. 
+                      // Host passes local/remote in its own perspective.
+                      // For Guest: local choice is what they picked, remote is what host picked.
+                      startMultiplayerGame(lobby.selection.local, lobby.selection.remote);
+                      lobby.hide();
+                  }
+              });
+
+              lobby.onSelect((charId) => {
+                  peerManager.send({ type: 'select', characterId: charId });
+              });
+
+              lobby.onStart(() => {
+                  peerManager.send({ type: 'start' });
+                  // Host starts game: local is host's choice, remote is guest's choice.
+                  startMultiplayerGame(lobby.selection.local, lobby.selection.remote);
+                  lobby.hide();
+              });
+
+              lobby.onBack(() => {
+                location.reload(); // Simple way to reset state
+              });
+
+          } else if (type === 'join') {
+              isHost = false;
+              isMultiplayer = true;
+              const joinMenu = new JoinMenu();
+              joinMenu.show();
+              joinMenu.onConnect((id) => {
+                  joinMenu.hide();
+                  peerManager.connectToHost(id);
+                  const lobby = new MultiplayerLobby(false);
+                  lobby.show();
+                  
+                  peerManager.onConnection(() => {
+                      lobby.setConnected(true);
+                  });
+
+                  peerManager.onData((data) => {
+                    if (data.type === 'select') {
+                        lobby.setRemoteSelection(data.characterId);
+                    } else if (data.type === 'start') {
+                        // Start received by Guest
+                        // lobby.selection.local is Guest's pick
+                        // lobby.selection.remote is Host's pick (synced via 'select' packet)
+                        startMultiplayerGame(lobby.selection.local, lobby.selection.remote);
+                        lobby.hide();
+                    }
+                  });
+
+                  lobby.onSelect((charId) => {
+                      peerManager.send({ type: 'select', characterId: charId });
+                  });
+
+                  lobby.onBack(() => {
+                    location.reload();
+                  });
+              });
+              joinMenu.onBack(() => {
+                joinMenu.hide();
+                gameMenu.show();
+              });
+          }
+      });
+      return;
+  }
   const charSelect = new CharacterSelect(mode);
   charSelect.show(gameInterface.container.parentElement || document.body);
   // allow returning to menu
@@ -161,6 +262,63 @@ gameMenu.onModeSelect((mode) => {
   });
 });
 
+function startMultiplayerGame(localChoice, remoteChoice) {
+    // localChoice = choice of current player (Host or Guest)
+    // remoteChoice = choice of the partner
+    
+    // For Host: P1=Host(local), P2=Guest(remote)
+    // For Guest: P1=Host(remote), P2=Guest(local)
+    const hostChoice = isHost ? localChoice : remoteChoice;
+    const guestChoice = isHost ? remoteChoice : localChoice;
+
+    const p1Config = Object.assign({}, ROSTER[hostChoice]);
+    const p2Config = Object.assign({}, ROSTER[guestChoice]);
+
+    player = new NetworkFighter({
+        ...p1Config,
+        position: START_POSITIONS.player,
+        isRemote: !isHost // Host controls player, Guest updates via state
+    });
+    
+    enemy = new NetworkFighter({
+        ...p2Config,
+        position: START_POSITIONS.enemy,
+        isRemote: isHost // Guest controls enemy, Host updates via state
+    });
+
+    // align to ground
+    try { alignSpriteToGround(player, canvas.height); } catch (e) {}
+    try { alignSpriteToGround(enemy, canvas.height); } catch (e) {}
+
+    menuActive = false;
+    gameInterface.container.classList.remove('hidden');
+
+    // Start timer and game logic for both
+    try { 
+        window.restartGame(player, enemy, (time) => {
+            gameInterface.timerUI.update(time);
+        }, () => {
+            // End of game logic
+            isRoundOver = true;
+            const result = window.whoWins(player, enemy);
+            gameInterface.winModal.show(result);
+        });
+    } catch (err) {}
+
+    // Network Loop
+    peerManager.onData((data) => {
+        if (data.type === 'state') {
+            if (isHost) {
+                // Host receives Guest state (Guest is P2)
+                enemy.receiveState(data.state);
+            } else {
+                // Guest receives Host state (Host is P1)
+                player.receiveState(data.state);
+            }
+        }
+    });
+}
+
 const keys = {
   a: { pressed: false },
   d: { pressed: false },
@@ -224,44 +382,76 @@ function animate() {
   if (!menuActive) {
     player.update(c, canvas, GRAVITY);
     enemy.update(c, canvas, GRAVITY);
+    
+    // Broadcast state if in multiplayer
+    if (isMultiplayer) {
+        if (isHost) {
+            peerManager.send({ type: 'state', state: player.getState() });
+        } else {
+            peerManager.send({ type: 'state', state: enemy.getState() });
+        }
+    }
 
     player.stopHorizontal();
     enemy.stopHorizontal();
 
-    // Player movment
-    if (keys.a.pressed && player.lastKey === 'a') {
-      player.moveLeft(5);
-      player.switchSprite('run');
-    } else if (keys.d.pressed && player.lastKey === 'd') {
-      player.moveRight(5);
-      player.switchSprite('run');
+    // Player movment - local only or PvP or Multiplayer (Local is always P1/P2 depending on role)
+    const localFighter = isHost ? player : enemy;
+    const remoteFighter = isHost ? enemy : player;
+
+    if (!isMultiplayer) {
+        // PvP / Arcade
+        if (keys.a.pressed && player.lastKey === 'a') {
+            player.moveLeft(5);
+            player.switchSprite('run');
+        } else if (keys.d.pressed && player.lastKey === 'd') {
+            player.moveRight(5);
+            player.switchSprite('run');
+        } else {
+            player.switchSprite('idle');
+        }
+
+        // Jump animation
+        if (player.velocity.y < 0) {
+            player.switchSprite('jump');
+        } else if (player.velocity.y > 0) {
+            player.switchSprite('fall');
+        }
+
+        // Enemy movment
+        if (keys.ArrowLeft.pressed && enemy.lastKey === 'ArrowLeft') {
+            enemy.moveLeft(5);
+            enemy.switchSprite('run');
+        } else if (keys.ArrowRight.pressed && enemy.lastKey === 'ArrowRight') {
+            enemy.moveRight(5);
+            enemy.switchSprite('run');
+        } else {
+            enemy.switchSprite('idle');
+        }
+
+        // Jump animation
+        if (enemy.velocity.y < 0) {
+            enemy.switchSprite('jump');
+        } else if (enemy.velocity.y > 0) {
+            enemy.switchSprite('fall');
+        }
     } else {
-      player.switchSprite('idle');
-    }
+        // Multiplayer: Both players use WSAD + Space for their locally controlled fighter
+        if (keys.a.pressed && localFighter.lastKey === 'a') {
+            localFighter.moveLeft(5);
+            localFighter.switchSprite('run');
+        } else if (keys.d.pressed && localFighter.lastKey === 'd') {
+            localFighter.moveRight(5);
+            localFighter.switchSprite('run');
+        } else {
+            localFighter.switchSprite('idle');
+        }
 
-    // Jump animation
-    if (player.velocity.y < 0) {
-      player.switchSprite('jump');
-    } else if (player.velocity.y > 0) {
-      player.switchSprite('fall');
-    }
-
-    // Enemy movment
-    if (keys.ArrowLeft.pressed && enemy.lastKey === 'ArrowLeft') {
-      enemy.moveLeft(5);
-      enemy.switchSprite('run');
-    } else if (keys.ArrowRight.pressed && enemy.lastKey === 'ArrowRight') {
-      enemy.moveRight(5);
-      enemy.switchSprite('run');
-    } else {
-      enemy.switchSprite('idle');
-    }
-
-    // Jump animation
-    if (enemy.velocity.y < 0) {
-      enemy.switchSprite('jump');
-    } else if (enemy.velocity.y > 0) {
-      enemy.switchSprite('fall');
+        if (localFighter.velocity.y < 0) {
+            localFighter.switchSprite('jump');
+        } else if (localFighter.velocity.y > 0) {
+            localFighter.switchSprite('fall');
+        }
     }
   }
 
@@ -315,11 +505,20 @@ function animate() {
 
     // End game based on health
     if (player.health <= 0 || enemy.health <= 0) {
-      // prevent duplicate end handling
-      if (timer === 0) return;
+      if (isRoundOver) return; // prevent duplicate end handling
       isRoundOver = true;
+      
+      // Stop the timer
+      if (typeof timerId !== 'undefined') {
+        clearInterval(timerId);
+      }
+
       const msg = whoWins(player, enemy);
-      try { gameInterface.winModal.show(msg, gameInterface.container.parentElement || document.body); } catch (e) {}
+      try { 
+        gameInterface.winModal.show(msg, gameInterface.container.parentElement || document.body); 
+      } catch (e) {
+        console.error('Error showing win modal:', e);
+      }
     }
   }
 
@@ -342,38 +541,46 @@ function animate() {
 animate();
 
 window.addEventListener('keydown', (event) => {
+  // Determine which fighter is local in multiplayer mode
+  const localFighter = isMultiplayer ? (isHost ? player : enemy) : player;
+  const isGuest = isMultiplayer && !isHost;
+
   // Always update pressed flags so late-created fighters can react immediately
   switch (event.key) {
     case 'd':
       keys.d.pressed = true;
-      if (player && !player.dead) player.lastKey = 'd';
+      if (localFighter && !localFighter.dead) localFighter.lastKey = 'd';
       break;
     case 'a':
       keys.a.pressed = true;
-      if (player && !player.dead) player.lastKey = 'a';
+      if (localFighter && !localFighter.dead) localFighter.lastKey = 'a';
       break;
     case 'w':
-      if (player && !player.dead) jump(player);
+      if (localFighter && !localFighter.dead) jump(localFighter);
       break;
     case 's':
       keys.s.pressed = true;
-      if (player && !player.dead) player.lastKey = 's';
+      if (localFighter && !localFighter.dead) localFighter.lastKey = 's';
       break;
     case ' ':
-      if (player && !player.dead) player.attack();
+      if (localFighter && !localFighter.dead) localFighter.attack();
       break;
     case 'ArrowRight':
+      if (isMultiplayer) break; // Disable arrows in multiplayer to avoid double controls
       keys.ArrowRight.pressed = true;
       if (enemy && !enemy.dead) enemy.lastKey = 'ArrowRight';
       break;
     case 'ArrowLeft':
+      if (isMultiplayer) break;
       keys.ArrowLeft.pressed = true;
       if (enemy && !enemy.dead) enemy.lastKey = 'ArrowLeft';
       break;
     case 'ArrowUp':
+      if (isMultiplayer) break;
       if (enemy && !enemy.dead) jump(enemy);
       break;
     case 'ArrowDown':
+      if (isMultiplayer) break;
       if (enemy && !enemy.dead) enemy.attack();
       break;
   }
@@ -394,14 +601,21 @@ window.addEventListener('keyup', (event) => {
       keys.s.pressed = false;
       break;
     case ' ':
-      if (player) player.canAttack = true; // Pozwól na kolejny atak po puszczeniu spacji
+      // If we used a localFighter reference here, we could reset attack logic if needed
+      if (!isMultiplayer && player) player.canAttack = true;
+      else if (isMultiplayer) {
+         const localFighter = isHost ? player : enemy;
+         if (localFighter) localFighter.canAttack = true;
+      }
       break;
 
     //enemy
     case 'ArrowRight':
+      if (isMultiplayer) break;
       keys.ArrowRight.pressed = false;
       break;
     case 'ArrowLeft':
+      if (isMultiplayer) break;
       keys.ArrowLeft.pressed = false;
       break;
     case 'ArrowUp':
