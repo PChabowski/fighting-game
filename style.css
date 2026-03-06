@@ -83,6 +83,41 @@ canvas {
   cursor: pointer;
 }
 
+.mobile-orientation-modal {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 120;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 20px;
+}
+
+.mobile-orientation-modal-panel {
+  max-width: 520px;
+  width: 100%;
+  background: rgba(10, 10, 10, 0.95);
+  border: 4px solid #ffffff;
+  padding: 20px;
+  text-align: center;
+  color: #ffffff;
+  font-family: 'Press Start 2P', system-ui;
+}
+
+.mobile-orientation-modal-message {
+  margin: 0 0 18px;
+  line-height: 1.7;
+  font-size: 12px;
+}
+
+.mobile-orientation-modal-button {
+  width: 100%;
+  font-family: 'Press Start 2P', system-ui;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
 .menu-button { width: 320px; text-align: center; }
 
 /* Character select styles */

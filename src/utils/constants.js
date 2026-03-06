@@ -6,7 +6,7 @@ export const START_POSITIONS = {
 };
 
 export const APP_VERSION = {
-  version: '1.1.0',
-  branch: 'update',
-  lastUpdate: '2026-03-05'
+  version: '1.2.0',
+  branch: 'fullscreen-mobile',
+  lastUpdate: '2026-03-06'
 };

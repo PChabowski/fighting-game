@@ -10,6 +10,7 @@ import { alignSpriteToGround } from './utils/scale.js';
 import { initResponsiveCanvas } from './utils/responsive.js';
 import { GameInterface } from './ui/GameInterface.js';
 import { GameMenu } from './ui/GameMenu.js';
+import { MobileOrientationModal } from './ui/MobileOrientationModal.js';
 
 const canvas = document.querySelector("canvas");
 const c = canvas.getContext("2d");
@@ -54,6 +55,12 @@ alignSpriteToGround(shop, canvas.height);
 // UI: create interface (player/enemy health + timer)
 const gameInterface = new GameInterface('.interface');
 gameInterface.reset();
+
+const mobileOrientationModal = new MobileOrientationModal();
+if (isMobile()) {
+  mobileOrientationModal.show(gameInterface.container.parentElement || document.body);
+  mobileOrientationModal.syncWithDeviceState();
+}
 
 // Start menu gamepad polling (dispatches gp-* events)
 try { initGamepadMenu(); } catch (e) {}

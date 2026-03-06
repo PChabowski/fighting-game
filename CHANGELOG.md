@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [1.2.0] - 2026-03-06
+
+### Added
+- Mobile Orientation Modal to enforce landscape and fullscreen mode for better UX.
+
+### Changed
+- Mobile Orientation Modal now automatically reappears when the player exits fullscreen or switches to portrait mode on mobile devices.
+
 ## [1.1.0] - 2026-03-05
 
 ### Added
