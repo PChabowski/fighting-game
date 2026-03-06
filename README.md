@@ -1,6 +1,10 @@
 # 🥊 JS Fighting Game - Kenji vs Mack
 
-A professional 2D fighting game built with pure JavaScript, utilizing Object-Oriented Programming (OOP) and modern ES6 modules.
+A modular 2D fighting game built with pure JavaScript (ES6 modules), Canvas 2D, and an online multiplayer mode powered by PeerJS.
+
+## Version
+
+- Current release: `v1.3.0`
 
 ## 🔗 Play Now
 
@@ -24,20 +28,40 @@ The project has been refactored into a modular architecture to ensure scalabilit
 │   ├── game.js               # Main game engine (Game Loop, rendering)
 │   ├── classes/              # Logic-related classes
 │   │   ├── Sprite.js         # Graphic handling and frame animations
-│   │   └── Fighter.js        # Physics, combat, and character mechanics
+│   │   ├── Fighter.js         # Physics, combat, and character mechanics
+│   │   └── NetworkFighter.js  # Multiplayer fighter with state interpolation
+│   ├── ui/                    # UI components (menu, timer, lobby, overlays)
+│   │   ├── GameMenu.js
+│   │   ├── MultiplayerMenu.js
+│   │   ├── JoinMenu.js
+│   │   ├── MultiplayerLobby.js
+│   │   ├── CharacterSelect.js
+│   │   └── WinModal.js
 │   └── utils/                # Helper tools and functions
 │       ├── collision.js      # Hitbox detection
 │       ├── constants.js      # Constants (Gravity, speed, dimensions)
 │       ├── input.js          # Keyboard and Gamepad handling
-│       └── gameLogic.js      # Time management and game state
+│       ├── gameLogic.js       # Time management and game state
+│       ├── peer.js            # PeerJS connection manager
+│       └── roster.js          # Character definitions shared by multiplayer
 └── README.md                 # Project documentation
 ```
+
+## ✨ Features
+
+- Arcade and local PvP game modes.
+- Online multiplayer with Host/Join lobby flow.
+- Character selection with shared roster and per-character animations.
+- Health/timer UI, win modal, rematch, and return-to-menu flow.
+- Keyboard, gamepad, and mobile touch controls.
+- Responsive canvas with fixed internal resolution (`1024x576`) and CSS scaling.
 
 ## 🛠️ Technical Overview
 
 - **ES6 Modules**: The codebase is split into modules, preventing naming conflicts in the global scope and improving maintainability.
-- **Sprite Rendering**: Advanced `c.save()` and `c.scale()` implementation allows for dynamic character flipping (mirroring) without the need for separate assets for both directions.
-- **Gamepad API**: Full controller support is implemented, mapping analog stick axes for movement and buttons for jumping and attacking actions.
+- **Sprite Rendering**: `c.save()` and `c.scale()` are used for dynamic character flipping (mirroring) without duplicate directional assets.
+- **Gamepad API**: Full controller support with movement, jump, attack, and menu navigation.
+- **PeerJS Networking**: Lightweight peer-to-peer session management for online matches.
 
 ## 🎮 Controls
 
@@ -48,7 +72,13 @@ The project has been refactored into a modular architecture to ensure scalabilit
 
 ### Player 2:
 
-- **Keyboard**: `Up Arrow` (Jump), `Left` / `Right` (Move), `M` (Attack)
+- **Keyboard (Local PvP)**: `Up Arrow` (Jump), `Left` / `Right` (Move), `Down Arrow` (Attack)
 - **Gamepad**: D-pad/Left Stick (Move), Button `A` (Jump), Button `X` (Attack)
+
+### Multiplayer (Online)
+
+- Both Host and Guest use local controls for their own fighter.
+- **Keyboard**: `W` (Jump), `A` / `D` (Move), `Space` (Attack)
+- Network sync is handled through PeerJS state exchange.
 
 *This project was developed for educational purposes. Character sprites for Kenji and Mack are property of their respective creators.*

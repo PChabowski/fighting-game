@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [1.3.0] - 2026-03-06
+
+### Added
+- Online multiplayer mode with PeerJS integration (Host / Join flow).
+- New networking layer: `NetworkFighter` for remote state sync and interpolation.
+- New multiplayer UI flow: `MultiplayerMenu`, `JoinMenu`, and `MultiplayerLobby`.
+- Shared fighter roster configuration in `src/utils/roster.js` for multiplayer character setup.
+
+### Changed
+- Main menu now includes a `Multiplayer` option and routes users to online session setup.
+- `game.js` updated to handle host/guest roles, state broadcasting, remote updates, and lobby-driven match start.
+- Win modal behavior improved for multiplayer flow (rematch and return handling).
+
+### Fixed
+- Rematch logic in multiplayer games is now stable and synchronized between peers.
+- Mobile controls were adjusted for multiplayer so only the local fighter is controlled.
+- Input handling now prevents dead fighters from moving/attacking in both single and multiplayer modes.
+
 ## [1.2.0] - 2026-03-06
 
 ### Added
