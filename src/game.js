@@ -4,7 +4,7 @@ import { rectangularCollision } from './utils/collision.js';
 import { decrementTimer, whoWins, jump, restartGame, timer } from './utils/gameLogic.js';
 import { handleGamepadInput, initGamepadMenu } from './utils/input.js';
 import { GRAVITY, START_POSITIONS, APP_VERSION } from './utils/constants.js';
-import { isMobile, initMobileControls } from './utils/mobile.js';
+import { isMobile, initMobileControls, removeMobileControls } from './utils/mobile.js';
 import { CharacterSelect } from './ui/CharacterSelect.js';
 import { alignSpriteToGround } from './utils/scale.js';
 import { initResponsiveCanvas } from './utils/responsive.js';
@@ -247,12 +247,13 @@ gameMenu.onModeSelect((mode) => {
     // initialize mobile controls now (after selection)
     if (isMobile()) {
       try {
+        const localFighter = player; // Single player is always P1
         window.mobileControls = initMobileControls(keys, {
-          jump: () => { if (player && !player.dead) jump(player); },
-          attack: () => { if (player && !player.dead) player.attack(); },
-          attackRelease: () => { if (player) player.canAttack = true; },
-          onLeft: () => { if (player) player.lastKey = 'a'; },
-          onRight: () => { if (player) player.lastKey = 'd'; }
+          jump: () => { if (localFighter && !localFighter.dead) jump(localFighter); },
+          attack: () => { if (localFighter && !localFighter.dead) localFighter.attack(); },
+          attackRelease: () => { if (localFighter) localFighter.canAttack = true; },
+          onLeft: () => { if (localFighter) localFighter.lastKey = 'a'; },
+          onRight: () => { if (localFighter) localFighter.lastKey = 'd'; }
         });
       } catch (e) {}
     }
@@ -320,6 +321,22 @@ function startMultiplayerGame(localChoice, remoteChoice) {
             window.restartGame(false); // Don't send back to avoid loop
         }
     });
+
+    // Initialize mobile controls for multiplayer
+    if (isMobile()) {
+        try {
+            const localFighter = isHost ? player : enemy;
+            window.mobileControls = initMobileControls(keys, {
+                jump: () => { if (localFighter && !localFighter.dead) jump(localFighter); },
+                attack: () => { if (localFighter && !localFighter.dead) localFighter.attack(); },
+                attackRelease: () => { if (localFighter) localFighter.canAttack = true; },
+                onLeft: () => { if (localFighter) localFighter.lastKey = 'a'; },
+                onRight: () => { if (localFighter) localFighter.lastKey = 'd'; }
+            });
+        } catch (e) {
+            console.error('Error initializing multiplayer mobile controls:', e);
+        }
+    }
 }
 
 const keys = {
@@ -668,6 +685,7 @@ try {
 
     // Return to menu -> show main menu, hide interface and reset round state
     gameInterface.winModal.onReturnToMenu(() => {
+      if (isMobile()) removeMobileControls();
       try { gameMenu.show(gameInterface.container.parentElement || document.body); } catch (e) {}
       try { menuActive = true; gameInterface.container.classList.add('hidden'); } catch (e) {}
       try { player = null; enemy = null; } catch (e) {}
