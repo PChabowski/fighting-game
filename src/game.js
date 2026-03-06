@@ -315,6 +315,9 @@ function startMultiplayerGame(localChoice, remoteChoice) {
                 // Guest receives Host state (Host is P1)
                 player.receiveState(data.state);
             }
+        } else if (data.type === 'rematch') {
+            // Signal from peer to restart the game
+            window.restartGame(false); // Don't send back to avoid loop
         }
     });
 }
@@ -515,7 +518,7 @@ function animate() {
 
       const msg = whoWins(player, enemy);
       try { 
-        gameInterface.winModal.show(msg, gameInterface.container.parentElement || document.body); 
+        gameInterface.winModal.show(msg, gameInterface.container.parentElement || document.body, isMultiplayer); 
       } catch (e) {
         console.error('Error showing win modal:', e);
       }
@@ -629,13 +632,25 @@ window.addEventListener('keyup', (event) => {
 });
 
 // expose restartGame for the inline button in index.html
-window.restartGame = () => {
+window.restartGame = (sendPacket = true) => {
   // allow restart only when fighters exist
   isRoundOver = false;
+
+  // If in multiplayer, we need to notify the peer or handle the received signal
+  if (isMultiplayer && sendPacket) {
+    peerManager.send({ type: 'rematch' });
+  }
+
   try {
-    restartGame(player, enemy, (t) => gameInterface.timer.set(t), () => {
+    restartGame(player, enemy, (t) => {
+      if (gameInterface.timer) gameInterface.timer.set(t);
+      else if (gameInterface.timerUI) gameInterface.timerUI.update(t);
+    }, () => {
+      isRoundOver = true;
       const msg = whoWins(player, enemy);
-      try { gameInterface.winModal.show(msg, gameInterface.container.parentElement || document.body); } catch (e) {}
+      try { 
+        gameInterface.winModal.show(msg, gameInterface.container.parentElement || document.body, isMultiplayer); 
+      } catch (e) {}
     });
   } catch (e) {}
 
