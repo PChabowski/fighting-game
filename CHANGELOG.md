@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [1.4.0] - 2026-03-08
+
+### Added
+- Added `AudioManager` to handle background music for menus and fights smoothly, overcoming browser autoplay policies.
+- Automatically switches between "Stage 1" music for menus and "Boss Fight" music when the game is played.
+- Implemented HTML5 Audio integration triggered by the first player interaction.
+
 ## [1.3.3] - 2026-03-08
 
 ### Added

@@ -16,9 +16,15 @@ import { JoinMenu } from './ui/JoinMenu.js';
 import { MultiplayerLobby } from './ui/MultiplayerLobby.js';
 import { peerManager } from './utils/peer.js';
 import { NetworkFighter } from './classes/NetworkFighter.js';
+import { AudioManager } from './classes/AudioManager.js';
 
 const canvas = document.querySelector("canvas");
 const c = canvas.getContext("2d");
+
+// Create global audio manager and try to start menu music
+const audioManager = new AudioManager();
+window.audioManager = audioManager;
+audioManager.play('stage_1');
 
 // Initialize responsive canvas (fixed internal resolution, CSS-scaled)
 initResponsiveCanvas(canvas);
@@ -339,6 +345,8 @@ function startMultiplayerGame(localChoice, remoteChoice) {
             // Signal from peer to return to main menu
             isMultiplayer = false;
             peerManager.disconnect();
+            
+            audioManager.play('stage_1');
             
             // Clean up UI and return to main menu
             try { gameInterface.reset(); } catch (e) {}
@@ -696,6 +704,8 @@ window.restartGame = (sendPacket = true) => {
   // allow restart only when fighters exist
   isRoundOver = false;
 
+  audioManager.play('boss_fight');
+
   // If in multiplayer, we need to notify the peer or handle the received signal
   if (isMultiplayer && sendPacket) {
     peerManager.send({ type: 'rematch' });
@@ -728,6 +738,7 @@ try {
 
     // Return to menu -> show main menu, hide interface and reset round state
     gameInterface.winModal.onReturnToMenu(() => {
+      audioManager.play('stage_1');
       if (isMultiplayer) {
         try {
           peerManager.send({ type: 'return_to_menu' });

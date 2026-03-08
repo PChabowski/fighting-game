@@ -6,7 +6,7 @@ export const START_POSITIONS = {
 };
 
 export const APP_VERSION = {
-  version: '1.3.3',
-  branch: 'multiplayer',
+  version: '1.4.0',
+  branch: 'audio-manager',
   lastUpdate: '2026-03-08'
 };
