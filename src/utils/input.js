@@ -1,83 +1,82 @@
-export function handleGamepadInput(player, enemy, keys, { jump, restartGame, allowRestart } = {}) {
+export function handleGamepadInput(player, enemy, keys, { jump, restartGame, allowRestart, isMultiplayer, localFighter } = {}) {
     const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
     const roundOver = typeof allowRestart === 'function' ? allowRestart() : false;
     
-    // Obsługa Gracza 1 (Gamepad 0)
-    if (gamepads[0] && !player.dead) {
-        const gp = gamepads[0];
-        // Allow only restart/confirm when round is over
+    // Helper to process gamepad input avoiding keyboard conflicts
+    const processGamepad = (gp, fighter, keyLeft, keyRight) => {
+        if (!gp || fighter.dead) return;
+
         if (!roundOver) {
-            // Lewy drążek lub D-pad (Ruch)
-            const xAxis = gp.axes[0]; // -1 lewo, 1 prawo
-            const dpadLeft = gp.buttons[14].pressed;
-            const dpadRight = gp.buttons[15].pressed;
+            const xAxis = gp.axes[0] || 0;
+            const dpadLeft = gp.buttons[14] && gp.buttons[14].pressed;
+            const dpadRight = gp.buttons[15] && gp.buttons[15].pressed;
+
+            let isMoving = false;
 
             if (xAxis < -0.2 || dpadLeft) {
-                keys.a.pressed = true;
-                player.lastKey = 'a';
+                keys[keyLeft].pressed = true;
+                fighter.lastKey = keyLeft;
+                isMoving = true;
             } else if (xAxis > 0.2 || dpadRight) {
-                keys.d.pressed = true;
-                player.lastKey = 'd';
-            } else {
-                keys.a.pressed = false;
-                keys.d.pressed = false;
+                keys[keyRight].pressed = true;
+                fighter.lastKey = keyRight;
+                isMoving = true;
             }
 
-            // Przycisk A lub D-pad góra (Skok)
-            if (gp.buttons[0].pressed || gp.buttons[12].pressed) {
-                jump(player);
+            // Only clear keys if the gamepad was actually moving in the previous frame
+            // This prevents gamepad idle state from constantly overriding keyboard inputs
+            if (!isMoving) {
+                if (fighter.gpMoved) {
+                    keys[keyLeft].pressed = false;
+                    keys[keyRight].pressed = false;
+                    fighter.gpMoved = false;
+                }
+            } else {
+                fighter.gpMoved = true;
             }
 
-            // Przycisk X lub B (Atak)
-            if (gp.buttons[2].pressed || gp.buttons[1].pressed) {
-                player.attack();
-            } else {
-                player.canAttack = true; // Resetowanie możliwości ataku (zastępuje keyup)
+            // Jump
+            if ((gp.buttons[0] && gp.buttons[0].pressed) || (gp.buttons[12] && gp.buttons[12].pressed)) {
+                jump(fighter);
             }
+
+            // Attack
+            if ((gp.buttons[2] && gp.buttons[2].pressed) || (gp.buttons[1] && gp.buttons[1].pressed)) {
+                fighter.attack();
+            } else {
+                fighter.canAttack = true; // Zastępuje keyup
+            }
+
         } else {
-            // when round is over, ensure movement flags are cleared
-            keys.a.pressed = false;
-            keys.d.pressed = false;
+            if (fighter.gpMoved) {
+                keys[keyLeft].pressed = false;
+                keys[keyRight].pressed = false;
+                fighter.gpMoved = false;
+            }
+            if (!(gp.buttons[2] && gp.buttons[2].pressed) && !(gp.buttons[1] && gp.buttons[1].pressed)) {
+                fighter.canAttack = true; // Ensure attack is ready for next round
+            }
         }
 
-        // Przycisk Start (Restart gry - tylko kiedy dozwolone)
-        if (gp.buttons[9].pressed) {
+        // Restart
+        if (gp.buttons[9] && gp.buttons[9].pressed) {
             const allowed = typeof allowRestart === 'function' ? allowRestart() : true;
             if (allowed && typeof restartGame === 'function') restartGame(player, enemy);
         }
-    }
+    };
 
-    // Obsługa Gracza 2 (Gamepad 1)
-    if (gamepads[1] && !enemy.dead) {
-        const gp = gamepads[1];
-        if (!roundOver) {
-            const xAxis = gp.axes[0];
-            const dpadLeft = gp.buttons[14].pressed;
-            const dpadRight = gp.buttons[15].pressed;
-
-            if (xAxis < -0.2 || dpadLeft) {
-                keys.ArrowLeft.pressed = true;
-                enemy.lastKey = 'ArrowLeft';
-            } else if (xAxis > 0.2 || dpadRight) {
-                keys.ArrowRight.pressed = true;
-                enemy.lastKey = 'ArrowRight';
-            } else {
-                keys.ArrowLeft.pressed = false;
-                keys.ArrowRight.pressed = false;
-            }
-
-            if (gp.buttons[0].pressed || gp.buttons[12].pressed) {
-                jump(enemy);
-            }
-
-            if (gp.buttons[2].pressed || gp.buttons[1].pressed) {
-                enemy.attack();
-            } else {
-                enemy.canAttack = true;
-            }
-        } else {
-            keys.ArrowLeft.pressed = false;
-            keys.ArrowRight.pressed = false;
+    if (isMultiplayer) {
+        // Online Multiplayer Mode: Only Gamepad 0 controls the localFighter using 'a' and 'd' mapped keys
+        if (gamepads[0] && localFighter) {
+            processGamepad(gamepads[0], localFighter, 'a', 'd');
+        }
+    } else {
+        // Local PvP / Arcade Mode: Gamepad 0 controls player, Gamepad 1 controls enemy
+        if (gamepads[0]) {
+            processGamepad(gamepads[0], player, 'a', 'd');
+        }
+        if (gamepads[1]) {
+            processGamepad(gamepads[1], enemy, 'ArrowLeft', 'ArrowRight');
         }
     }
 }

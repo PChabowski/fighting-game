@@ -362,7 +362,15 @@ function animate() {
   const restartHandler = (p, e) => {
     try { window.restartGame(); } catch (err) { /* ignore */ }
   };
-  if (!menuActive) handleGamepadInput(player, enemy, keys, { jump, restartGame: restartHandler, allowRestart: () => isRoundOver });
+  
+  const currentLocalFighter = isMultiplayer ? (isHost ? player : enemy) : player;
+  if (!menuActive) handleGamepadInput(player, enemy, keys, { 
+    jump, 
+    restartGame: restartHandler, 
+    allowRestart: () => isRoundOver,
+    isMultiplayer,
+    localFighter: currentLocalFighter
+  });
 
   // Draw background as a repeating pattern that fills the entire canvas width
   if (background.image && background.image.complete && background.image.naturalWidth) {

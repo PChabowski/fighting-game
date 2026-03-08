@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [1.3.1] - 2026-03-08
+
+### Added
+- Full gamepad navigation support for online multiplayer menus (`MultiplayerMenu`, `JoinMenu`, and `MultiplayerLobby`).
+
+### Fixed
+- Fixed bug where gamepad movement (walking) was broken in generic local PvP / Arcade modes caused by over-resetting keys each frame. 
+- Resolved issue in Online Multiplayer where gamepads were hardcoded to control Player 1 (Host). Gamepads now dynamically control local fighters based on connection logic.
+- Prevented gamepad state resets from blocking or conflicting with keyboard actions logic using a dedicated tracking property (`gpMoved`).
+
 ## [1.3.0] - 2026-03-06
 
 ### Added

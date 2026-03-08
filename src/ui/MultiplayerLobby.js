@@ -103,6 +103,43 @@ export class MultiplayerLobby {
             location.reload();
         }
     });
+
+    // Gamepad focus handling
+    const rosterBtns = Array.from(rosterWrap.querySelectorAll('.avatar-btn'));
+    this.focusables = [...rosterBtns, this.startBtn, this.backBtn];
+    this.focusIndex = 0;
+
+    this._onGpUp = () => this._moveGpFocus(-1);
+    this._onGpDown = () => this._moveGpFocus(1);
+    this._onGpLeft = () => this._moveGpFocus(-1);
+    this._onGpRight = () => this._moveGpFocus(1);
+    this._onGpConfirm = () => {
+      const el = this.focusables[this.focusIndex];
+      // Only click start button if it's not disabled/hidden
+      if (el === this.startBtn && (this.startBtn.disabled || this.startBtn.style.display === 'none')) {
+        return;
+      }
+      if (el) el.click();
+    };
+    this._onGpBack = () => this.backBtn.click();
+  }
+
+  _moveGpFocus(delta) {
+    if (!this.focusables || this.focusables.length === 0) return;
+    this.focusIndex = (this.focusIndex + delta + this.focusables.length) % this.focusables.length;
+    this._updateGpFocus();
+  }
+
+  _updateGpFocus() {
+    this.focusables.forEach((el, i) => {
+      if (i === this.focusIndex) {
+        el.classList.add('gp-focused');
+        if (el.classList.contains('avatar-btn')) el.classList.add('avatar-gp-focused');
+      } else {
+        el.classList.remove('gp-focused');
+        if (el.classList.contains('avatar-btn')) el.classList.remove('avatar-gp-focused');
+      }
+    });
   }
 
   _renderPeerId() {
@@ -157,10 +194,33 @@ export class MultiplayerLobby {
   show(parent = document.body) {
     this.el.style.display = 'flex';
     parent.appendChild(this.el);
+
+    document.addEventListener('gp-up', this._onGpUp);
+    document.addEventListener('gp-down', this._onGpDown);
+    document.addEventListener('gp-left', this._onGpLeft);
+    document.addEventListener('gp-right', this._onGpRight);
+    document.addEventListener('gp-confirm', this._onGpConfirm);
+    document.addEventListener('gp-back', this._onGpBack);
+
+    try {
+      const hasPad = navigator.getGamepads ? Array.from(navigator.getGamepads()).some(g => !!g) : false;
+      if (hasPad) this._updateGpFocus();
+      else this.focusables.forEach(el => {
+        el.classList.remove('gp-focused');
+        if (el.classList.contains('avatar-btn')) el.classList.remove('avatar-gp-focused');
+      });
+    } catch (e) {}
   }
 
   hide() {
     if (this.el.parentElement) this.el.parentElement.removeChild(this.el);
+
+    document.removeEventListener('gp-up', this._onGpUp);
+    document.removeEventListener('gp-down', this._onGpDown);
+    document.removeEventListener('gp-left', this._onGpLeft);
+    document.removeEventListener('gp-right', this._onGpRight);
+    document.removeEventListener('gp-confirm', this._onGpConfirm);
+    document.removeEventListener('gp-back', this._onGpBack);
   }
 
   onSelect(cb) { this.onSelectCallback = cb; }
