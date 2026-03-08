@@ -9,8 +9,29 @@ export class AudioManager {
         // Initialize track settings
         for (const [name, audio] of Object.entries(this.tracks)) {
             audio.loop = true;
-            audio.volume = 0.5; // default volume
+            audio.volume = 0.10; // default volume (reduced)
         }
+
+        // Initialize sound effects
+        this.sfx = {
+            attack: []
+        };
+        for (let i = 1; i <= 8; i++) {
+            this.sfx.attack.push(new Audio(`assets/sound-effect/swoshes/swosh-${i}.flac`));
+        }
+    }
+
+    playSoundEffect(type) {
+        if (!this.sfx[type] || this.sfx[type].length === 0) return;
+
+        const sounds = this.sfx[type];
+        const randomIndex = Math.floor(Math.random() * sounds.length);
+        const soundToPlay = sounds[randomIndex].cloneNode(); // Clone to allow overlapping sounds
+        soundToPlay.volume = 0.30; // SFX volume
+        
+        soundToPlay.play().catch(e => {
+            // Ignore autoplay errors for SFX, as they usually happen before user interaction
+        });
     }
 
     play(trackName) {

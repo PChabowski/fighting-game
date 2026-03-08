@@ -223,6 +223,10 @@ export class Fighter extends Sprite {
                     this.image = this.sprites.attack.image;
                     this.frameMax = this.sprites.attack.frameMax;
                     this.framesCurrent = 0;
+                    
+                    if (window.audioManager) {
+                        window.audioManager.playSoundEffect('attack');
+                    }
                 }
                 break;
             case 'takeHit':

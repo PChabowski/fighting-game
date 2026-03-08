@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [1.5.0] - 2026-03-08
+
+### Added
+- Added immersive attack sound effects (`swosh`) to the `Fighter` class using `AudioManager`.
+- Added a suite of randomly selected swosh sound effect files for varied attack feedback.
+
 ## [1.4.0] - 2026-03-08
 
 ### Added
