@@ -335,6 +335,19 @@ function startMultiplayerGame(localChoice, remoteChoice) {
         } else if (data.type === 'rematch') {
             // Signal from peer to restart the game
             window.restartGame(false); // Don't send back to avoid loop
+        } else if (data.type === 'return_to_menu') {
+            // Signal from peer to return to main menu
+            isMultiplayer = false;
+            peerManager.disconnect();
+            
+            // Clean up UI and return to main menu
+            try { gameInterface.reset(); } catch (e) {}
+            try { gameInterface.winModal.remove(); } catch (e) {}
+            if (isMobile()) removeMobileControls();
+            
+            try { gameMenu.show(gameInterface.container.parentElement || document.body); } catch (e) {}
+            try { menuActive = true; gameInterface.container.classList.add('hidden'); } catch (e) {}
+            try { player = null; enemy = null; } catch (e) {}
         }
     });
 
@@ -715,6 +728,15 @@ try {
 
     // Return to menu -> show main menu, hide interface and reset round state
     gameInterface.winModal.onReturnToMenu(() => {
+      if (isMultiplayer) {
+        try {
+          peerManager.send({ type: 'return_to_menu' });
+          peerManager.disconnect();
+          isMultiplayer = false;
+        } catch (e) {
+          console.error('Error disconnecting peer on return to menu:', e);
+        }
+      }
       if (isMobile()) removeMobileControls();
       try { gameMenu.show(gameInterface.container.parentElement || document.body); } catch (e) {}
       try { menuActive = true; gameInterface.container.classList.add('hidden'); } catch (e) {}

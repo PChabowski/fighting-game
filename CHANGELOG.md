@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [1.3.3] - 2026-03-08
+
+### Added
+- Synchronized "Return to Menu" functionality across peers during multiplayer matches. Returning to the main menu immediately disconnects the peer and properly brings the remote guest back to the lobby or main menu logic.
+
 ## [1.3.2] - 2026-03-08
 
 ### Changed
