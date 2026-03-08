@@ -6,7 +6,7 @@ export const START_POSITIONS = {
 };
 
 export const APP_VERSION = {
-  version: '1.3.1',
+  version: '1.3.2',
   branch: 'multiplayer',
   lastUpdate: '2026-03-08'
 };

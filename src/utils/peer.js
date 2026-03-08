@@ -57,6 +57,24 @@ export class PeerManager {
         });
     }
 
+    disconnect() {
+        if (this.connection) {
+            this.connection.close();
+            this.connection = null;
+        }
+        if (this.peer) {
+            this.peer.destroy();
+            this.peer = null;
+        }
+        this.peerId = null;
+        this.isHost = false;
+        
+        // wyczyszczenie callbacków aby nie dublować przycisków
+        this.onDataCallback = null;
+        this.onOpenCallback = null;
+        this.onConnectionCallback = null;
+    }
+
     send(data) {
         if (this.connection && this.connection.open) {
             this.connection.send(data);

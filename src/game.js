@@ -103,6 +103,9 @@ gameMenu.onModeSelect((mode) => {
               
               peerManager.onConnection(() => {
                   lobby.setConnected(true);
+                  if (lobby.selection.local) {
+                      peerManager.send({ type: 'select', characterId: lobby.selection.local });
+                  }
               });
               
               peerManager.onData((data) => {
@@ -128,8 +131,10 @@ gameMenu.onModeSelect((mode) => {
                   lobby.hide();
               });
 
-              lobby.onBack(() => {
-                location.reload(); // Simple way to reset state
+              lobby.onLeave(() => {
+                peerManager.disconnect();
+                lobby.hide();
+                multiMenu.show(gameInterface.container.parentElement || document.body);
               });
 
           } else if (type === 'join') {
@@ -163,13 +168,15 @@ gameMenu.onModeSelect((mode) => {
                       peerManager.send({ type: 'select', characterId: charId });
                   });
 
-                  lobby.onBack(() => {
-                    location.reload();
+                  lobby.onLeave(() => {
+                    peerManager.disconnect();
+                    lobby.hide();
+                    multiMenu.show(gameInterface.container.parentElement || document.body);
                   });
               });
               joinMenu.onBack(() => {
                 joinMenu.hide();
-                gameMenu.show();
+                multiMenu.show(gameInterface.container.parentElement || document.body);
               });
           }
       });
@@ -315,6 +322,15 @@ function startMultiplayerGame(localChoice, remoteChoice) {
             } else {
                 // Guest receives Host state (Host is P1)
                 player.receiveState(data.state);
+            }
+        } else if (data.type === 'hit') {
+            // Odebranie potwierdzenia autorytatywnego uderzenia
+            if (data.target === 'player') {
+                player.takeHit(data.damage);
+                try { gameInterface.playerUI.update(player.health, !!window.gsap); } catch(e){}
+            } else if (data.target === 'enemy') {
+                enemy.takeHit(data.damage);
+                try { gameInterface.enemyUI.update(enemy.health, !!window.gsap); } catch(e){}
             }
         } else if (data.type === 'rematch') {
             // Signal from peer to restart the game
@@ -498,11 +514,14 @@ function animate() {
       player.framesCurrent === pHitFrame
     ) {
       player.isAttacking = false;
-      enemy.takeHit(5);
-      if (window.gsap) {
-        gameInterface.enemyUI.update(enemy.health, true);
-      } else {
-        gameInterface.enemyUI.update(enemy.health, false);
+      if (!isMultiplayer || !player.isRemote) {
+        enemy.takeHit(5);
+        if (window.gsap) {
+          gameInterface.enemyUI.update(enemy.health, true);
+        } else {
+          gameInterface.enemyUI.update(enemy.health, false);
+        }
+        if (isMultiplayer) peerManager.send({ type: 'hit', target: 'enemy', damage: 5 });
       }
     }
 
@@ -518,11 +537,14 @@ function animate() {
       enemy.framesCurrent === eHitFrame
     ) {
       enemy.isAttacking = false;
-      player.takeHit(5);
-      if (window.gsap) {
-        gameInterface.playerUI.update(player.health, true);
-      } else {
-        gameInterface.playerUI.update(player.health, false);
+      if (!isMultiplayer || !enemy.isRemote) {
+        player.takeHit(5);
+        if (window.gsap) {
+          gameInterface.playerUI.update(player.health, true);
+        } else {
+          gameInterface.playerUI.update(player.health, false);
+        }
+        if (isMultiplayer) peerManager.send({ type: 'hit', target: 'player', damage: 5 });
       }
     }
 

@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [1.3.2] - 2026-03-08
+
+### Changed
+- Improved `MultiplayerLobby` layout, centering buttons ("Leave Lobby" and "Start Game") side-by-side with appropriate spacing. Guest's "Start Game" button is now hidden properly to keep "Leave Lobby" perfectly centered.
+- Pressing "Enter" in the `JoinMenu` now automatically attempts to connect instead of requiring a button click.
+
+### Fixed
+- Fixed backward navigation: `JoinMenu` and `MultiplayerLobby` now correctly return to `MultiplayerMenu` without reloading the entire page. Implemented `peerManager.disconnect()` for safe connection cleanup.
+- Synchronized Host character selection to Guests on join, avoiding "None" glitches.
+- Fixed rematch desynchronization issues. Both `Fighter` and `NetworkFighter`'s `restart` mechanisms were updated to forcefully stop old attack states and animation tracking. NetworkFighter safely ignores old packets slightly after reset.
+- Refactored attack registration for Guest in Multiplayer. Attacks are now handled locally, enforcing hit logic on standard and remote clients, followed by broadcasting hit confirmation to the peer instead of relying entirely on remote bounding-box responses.
+
 ## [1.3.1] - 2026-03-08
 
 ### Added

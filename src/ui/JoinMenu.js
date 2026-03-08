@@ -95,9 +95,14 @@ export class JoinMenu {
   }
 
   onConnect(cb) {
-    this.btnConnect.addEventListener('click', () => {
+    const handleConnect = () => {
       const id = this.input.value.trim();
       if (id) cb(id);
+    };
+
+    this.btnConnect.addEventListener('click', handleConnect);
+    this.input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') handleConnect();
     });
   }
 

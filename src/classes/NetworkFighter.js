@@ -14,6 +14,17 @@ export class NetworkFighter extends Fighter {
         };
     }
 
+    restart(startPosition) {
+        super.restart(startPosition);
+        this.targetState = {
+            position: { x: this.position.x, y: this.position.y },
+            velocity: { x: 0, y: 0 },
+            facing: startPosition.x < 500 ? 'right' : 'left'
+        };
+        this.facing = this.targetState.facing;
+        this._lastRestartTime = Date.now();
+    }
+
     update(c, canvas, gravity) {
         this.draw(c);
         if (!this.dead) this.animateFrames();
@@ -66,6 +77,13 @@ export class NetworkFighter extends Fighter {
     receiveState(data) {
         if (!this.isRemote) return;
         
+        // Zabezpieczenie przed starymi pakietami sprzed resetu
+        if (this._lastRestartTime && Date.now() - this._lastRestartTime < 1000) {
+            if (data.dead || data.health <= 0 || data.isAttacking) {
+                return; // Ignoruj opóźnione groźne stany tuż po restarcie
+            }
+        }
+
         this.targetState.position = { ...data.position };
         this.targetState.velocity = { ...data.velocity };
         if (data.facing) this.targetState.facing = data.facing;

@@ -73,18 +73,26 @@ export class MultiplayerLobby {
 
     const actions = document.createElement('div');
     actions.className = 'char-actions';
-
-    this.startBtn = document.createElement('button');
-    this.startBtn.className = 'button';
-    this.startBtn.textContent = 'Start Game';
-    this.startBtn.disabled = true;
-    if (!this.isHost) this.startBtn.style.display = 'none';
-    actions.appendChild(this.startBtn);
+    actions.style.display = 'flex';
+    actions.style.flexDirection = 'row';
+    actions.style.justifyContent = 'center';
+    actions.style.gap = '20px';
+    actions.style.width = '100%';
+    actions.style.marginTop = '20px';
 
     this.backBtn = document.createElement('button');
     this.backBtn.className = 'button';
     this.backBtn.textContent = 'Leave Lobby';
     actions.appendChild(this.backBtn);
+
+    this.startBtn = document.createElement('button');
+    this.startBtn.className = 'button';
+    this.startBtn.textContent = 'Start Game';
+    this.startBtn.disabled = true;
+    if (!this.isHost) {
+      this.startBtn.style.display = 'none'; 
+    }
+    actions.appendChild(this.startBtn);
 
     this.el.appendChild(actions);
 
@@ -106,7 +114,7 @@ export class MultiplayerLobby {
 
     // Gamepad focus handling
     const rosterBtns = Array.from(rosterWrap.querySelectorAll('.avatar-btn'));
-    this.focusables = [...rosterBtns, this.startBtn, this.backBtn];
+    this.focusables = [...rosterBtns, this.backBtn, this.startBtn];
     this.focusIndex = 0;
 
     this._onGpUp = () => this._moveGpFocus(-1);

@@ -64,6 +64,9 @@ export class Fighter extends Sprite {
         this.position = { ...startPosition };
         this.velocity = { x: 0, y: 0 };
         this.canAttack = true;
+        this.isAttacking = false;
+        this.framesElapsed = 0;
+        this.framesCurrent = 0;
         
         // Wymuszamy zmianę obrazka na idle bezpośrednio, omijając blokady switchSprite
         if (this.sprites.idle) {
