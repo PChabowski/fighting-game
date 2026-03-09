@@ -32,8 +32,15 @@ export class PeerManager {
         this.peer.on('connection', (conn) => {
             console.log('Host received connection incoming!');
             this.connection = conn;
-            this._setupConnection();
-            // DO NOT call onConnectionCallback(conn) here. Must wait for connection.on('open')
+            // Listen for open event directly on the incoming connection for the Host
+            this.connection.on('open', () => {
+                console.log('Host-side DataConnection strictly opened!');
+                this._setupConnectionForData();
+                if (this.onConnectionCallback) this.onConnectionCallback(this.connection);
+            });
+            this.connection.on('error', (err) => {
+               console.error('Host connection error:', err);
+            });
         });
 
         this.peer.on('error', (err) => {
@@ -59,7 +66,17 @@ export class PeerManager {
         this.peer.on('open', () => {
             console.log('Client Peer opened, initiating data connection to Host.');
             this.connection = this.peer.connect(id, { reliable: true });
-            this._setupConnection();
+            
+            // Listen for open event strictly on the Client side outgoing connection
+            this.connection.on('open', () => {
+                console.log('Client-side DataConnection strictly opened!');
+                this._setupConnectionForData();
+                if (this.onConnectionCallback) this.onConnectionCallback(this.connection);
+            });
+
+            this.connection.on('error', (err) => {
+               console.error('Client connection error:', err);
+            });
         });
 
         this.peer.on('error', (err) => {
@@ -67,20 +84,10 @@ export class PeerManager {
         });
     }
 
-    _setupConnection() {
-        console.log('Setting up DataConnection events. Current open state:', this.connection.open);
+    // Now this ONLY binds the data and close events for an ALREADY open connection
+    _setupConnectionForData() {
+        console.log('Binding data streams...');
         
-        const openHandler = () => {
-            console.log('DataConnection opened successfully!');
-            if (this.onConnectionCallback) this.onConnectionCallback(this.connection);
-        };
-
-        if (this.connection.open) {
-            openHandler();
-        } else {
-            this.connection.on('open', openHandler);
-        }
-
         this.connection.on('data', (data) => {
             console.log('Received data:', data);
             if (this.onDataCallback) this.onDataCallback(data);
@@ -88,10 +95,6 @@ export class PeerManager {
 
         this.connection.on('close', () => {
             console.log('Connection closed');
-        });
-        
-        this.connection.on('error', (err) => {
-            console.error('Connection error:', err);
         });
     }
 
