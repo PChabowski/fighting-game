@@ -1,7 +1,18 @@
 // Single, consolidated mobile controls module
-export function isMobile() {
+export function isAndroid() {
   if (typeof navigator === 'undefined') return false;
-  return (navigator.maxTouchPoints && navigator.maxTouchPoints > 0) || /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  return /Android/i.test(navigator.userAgent);
+}
+
+export function isIOS() {
+  if (typeof navigator === 'undefined') return false;
+  // Account for iPhones, iPads, and iOS 13+ iPads pretending to be Macs but having touch points
+  return /iPhone|iPad|iPod/i.test(navigator.userAgent) || 
+         (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
+export function isMobile() {
+  return isAndroid() || isIOS();
 }
 
 import { ActionButton } from '../ui/ActionButton.js';

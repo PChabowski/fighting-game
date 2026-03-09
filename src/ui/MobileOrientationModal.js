@@ -1,4 +1,4 @@
-import { isMobile } from '../utils/mobile.js';
+import { isMobile, isIOS } from '../utils/mobile.js';
 
 export class MobileOrientationModal {
   constructor() {
@@ -10,19 +10,24 @@ export class MobileOrientationModal {
 
     this.message = document.createElement('p');
     this.message.className = 'mobile-orientation-modal-message';
-    this.message.textContent = 'For the best experience, please play in Fullscreen and Landscape mode.';
-
-    this.button = document.createElement('button');
-    this.button.className = 'button menu-button mobile-orientation-modal-button';
-    this.button.type = 'button';
-    this.button.textContent = 'Switch to Fullscreen & Landscape';
-
+    
     this.panel.appendChild(this.message);
-    this.panel.appendChild(this.button);
-    this.el.appendChild(this.panel);
 
-    this._onClick = this.activate.bind(this);
-    this.button.addEventListener('click', this._onClick);
+    if (isIOS()) {
+      this.message.textContent = 'Please rotate your device to landscape for the best experience.';
+    } else {
+      this.message.textContent = 'For the best experience, please play in Fullscreen and Landscape mode.';
+      this.button = document.createElement('button');
+      this.button.className = 'button menu-button mobile-orientation-modal-button';
+      this.button.type = 'button';
+      this.button.textContent = 'Switch to Fullscreen & Landscape';
+      this.panel.appendChild(this.button);
+
+      this._onClick = this.activate.bind(this);
+      this.button.addEventListener('click', this._onClick);
+    }
+
+    this.el.appendChild(this.panel);
 
     this._onStateChange = this.syncWithDeviceState.bind(this);
 
@@ -95,7 +100,9 @@ export class MobileOrientationModal {
   }
 
   remove() {
-    this.button.removeEventListener('click', this._onClick);
+    if (this.button) {
+      this.button.removeEventListener('click', this._onClick);
+    }
     if (typeof document !== 'undefined') {
       document.removeEventListener('fullscreenchange', this._onStateChange);
     }
