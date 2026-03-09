@@ -53,7 +53,6 @@ export class PeerManager {
                 iceServers: [
                     { urls: 'stun:stun.l.google.com:19302' },
                     { urls: 'stun:stun1.l.google.com:19302' },
-                    { urls: 'stun:0.peerjs.com:3478' },
                     { 
                         urls: [
                             "turn:openrelay.metered.ca:80",
@@ -63,8 +62,7 @@ export class PeerManager {
                         username: "openrelayproject",
                         credential: "openrelayproject"
                     }
-                ],
-                iceTransportPolicy: 'all'
+                ]
             }
         });
 
@@ -99,7 +97,6 @@ export class PeerManager {
                 iceServers: [
                     { urls: 'stun:stun.l.google.com:19302' },
                     { urls: 'stun:stun1.l.google.com:19302' },
-                    { urls: 'stun:0.peerjs.com:3478' },
                     { 
                         urls: [
                             "turn:openrelay.metered.ca:80",
@@ -109,8 +106,7 @@ export class PeerManager {
                         username: "openrelayproject",
                         credential: "openrelayproject"
                     }
-                ],
-                iceTransportPolicy: 'all'
+                ]
             }
         });
 
