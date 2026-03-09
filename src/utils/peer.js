@@ -11,7 +11,14 @@ export class PeerManager {
 
     initHost() {
         this.isHost = true;
-        this.peer = new Peer();
+        this.peer = new Peer({
+            config: {
+                iceServers: [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' }
+                ]
+            }
+        });
 
         this.peer.on('open', (id) => {
             this.peerId = id;
@@ -21,7 +28,6 @@ export class PeerManager {
         this.peer.on('connection', (conn) => {
             this.connection = conn;
             this._setupConnection();
-            if (this.onConnectionCallback) this.onConnectionCallback(conn);
         });
 
         this.peer.on('error', (err) => {
@@ -31,7 +37,14 @@ export class PeerManager {
 
     connectToHost(id) {
         this.isHost = false;
-        this.peer = new Peer();
+        this.peer = new Peer({
+            config: {
+                iceServers: [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' }
+                ]
+            }
+        });
 
         this.peer.on('open', () => {
             this.connection = this.peer.connect(id);
