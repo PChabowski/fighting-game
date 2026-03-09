@@ -4,7 +4,7 @@ A modular 2D fighting game built with pure JavaScript (ES6 modules), Canvas 2D, 
 
 ## Version
 
-- Current release: `v1.3.0`
+- Current release: `v1.6.0`
 
 ## 🔗 Play Now
 

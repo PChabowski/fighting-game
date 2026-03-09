@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [1.6.0] - 2026-03-09
+
+### Added
+- Updated fighter damage handling and roster configuration for improved gameplay.
+
 ## [1.5.0] - 2026-03-08
 
 ### Added
