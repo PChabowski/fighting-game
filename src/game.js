@@ -196,50 +196,10 @@ gameMenu.onModeSelect((mode) => {
   });
   charSelect.onConfirm((choices) => {
     // choices: { player: 'Mack', enemy: 'Kenji' }
-    // map to fighter configs (inline mapping)
-    const roster = {
-      Mack: {
-        position: START_POSITIONS.player,
-        velocity: { x: 0, y: 0 },
-        imageSrc: '../assets/images/Mack/Idle.png',
-        scale: 2.5,
-        frameMax: 8,
-        offset: { x: 215, y: 155 },
-        sprites: {
-          idle: { imageSrc: '../assets/images/Mack/Idle.png', frameMax: 8 },
-          run: { imageSrc: '../assets/images/Mack/Run.png', frameMax: 8 },
-          jump: { imageSrc: '../assets/images/Mack/Jump.png', frameMax: 2 },
-          fall: { imageSrc: '../assets/images/Mack/Fall.png', frameMax: 2 },
-          attack: { imageSrc: '../assets/images/Mack/Attack1.png', frameMax: 6 },
-          takeHit: { imageSrc: '../assets/images/Mack/Take Hit - white silhouette.png', frameMax: 4 },
-          death: { imageSrc: '../assets/images/Mack/Death.png', frameMax: 6 },
-        },
-        attackBox: { offset: { x: 100, y: 50 }, width: 160, height: 50 },
-      },
-      Kenji: {
-        position: START_POSITIONS.enemy,
-        velocity: { x: 0, y: 0 },
-        color: 'yellow',
-        imageSrc: '../assets/images/Kenji/Idle.png',
-        scale: 2.5,
-        frameMax: 4,
-        offset: { x: 215, y: 170 },
-        sprites: {
-          idle: { imageSrc: '../assets/images/Kenji/Idle.png', frameMax: 4 },
-          run: { imageSrc: '../assets/images/Kenji/Run.png', frameMax: 8 },
-          jump: { imageSrc: '../assets/images/Kenji/Jump.png', frameMax: 2 },
-          fall: { imageSrc: '../assets/images/Kenji/Fall.png', frameMax: 2 },
-          attack: { imageSrc: '../assets/images/Kenji/Attack1.png', frameMax: 4 },
-          takeHit: { imageSrc: '../assets/images/Kenji/Take hit.png', frameMax: 3 },
-          death: { imageSrc: '../assets/images/Kenji/Death.png', frameMax: 7 },
-        },
-        attackBox: { offset: { x: 83, y: 50 }, width: 160, height: 50 },
-      }
-    };
 
-    // create fighters based on selection
-    player = new Fighter(Object.assign({}, roster[choices.player] || roster.Mack));
-    enemy = new Fighter(Object.assign({}, roster[choices.enemy] || roster.Kenji));
+    // create fighters based on selection using ROSTER from utils
+    player = new Fighter(Object.assign({ position: START_POSITIONS.player }, ROSTER[choices.player] || ROSTER.Mack));
+    enemy = new Fighter(Object.assign({ position: START_POSITIONS.enemy }, ROSTER[choices.enemy] || ROSTER.Kenji));
 
     // align to ground now that images exist
     try { alignSpriteToGround(player, canvas.height); } catch (e) {}
@@ -536,13 +496,13 @@ function animate() {
     ) {
       player.isAttacking = false;
       if (!isMultiplayer || !player.isRemote) {
-        enemy.takeHit(5);
+        enemy.takeHit(player.damage);
         if (window.gsap) {
           gameInterface.enemyUI.update(enemy.health, true);
         } else {
           gameInterface.enemyUI.update(enemy.health, false);
         }
-        if (isMultiplayer) peerManager.send({ type: 'hit', target: 'enemy', damage: 5 });
+        if (isMultiplayer) peerManager.send({ type: 'hit', target: 'enemy', damage: player.damage });
       }
     }
 
@@ -559,13 +519,13 @@ function animate() {
     ) {
       enemy.isAttacking = false;
       if (!isMultiplayer || !enemy.isRemote) {
-        player.takeHit(5);
+        player.takeHit(enemy.damage);
         if (window.gsap) {
           gameInterface.playerUI.update(player.health, true);
         } else {
           gameInterface.playerUI.update(player.health, false);
         }
-        if (isMultiplayer) peerManager.send({ type: 'hit', target: 'player', damage: 5 });
+        if (isMultiplayer) peerManager.send({ type: 'hit', target: 'player', damage: enemy.damage });
       }
     }
 

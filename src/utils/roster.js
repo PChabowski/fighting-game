@@ -8,6 +8,7 @@ export const ROSTER = {
         scale: 2.5,
         frameMax: 8,
         offset: { x: 215, y: 155 },
+        damage: 8,
         sprites: {
             idle: { imageSrc: '../assets/images/Mack/Idle.png', frameMax: 8 },
             run: { imageSrc: '../assets/images/Mack/Run.png', frameMax: 8 },
@@ -29,6 +30,7 @@ export const ROSTER = {
         scale: 2.5,
         frameMax: 4,
         offset: { x: 215, y: 170 },
+        damage: 5,
         sprites: {
             idle: { imageSrc: '../assets/images/Kenji/Idle.png', frameMax: 4 },
             run: { imageSrc: '../assets/images/Kenji/Run.png', frameMax: 8 },

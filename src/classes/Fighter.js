@@ -9,6 +9,7 @@ export class Fighter extends Sprite {
         scale = 1, 
         frameMax = 1, 
         offset = { x: 0, y: 0 },
+        damage = 5,
         sprites,
         attackBox = { offset: {}, width: undefined, height: undefined }
     }) {
@@ -36,6 +37,7 @@ export class Fighter extends Sprite {
             width: attackBox.width,
             height: attackBox.height
         };
+        this.damage = damage;
         this.color = color;
         this.isAttacking;
         this.health = 100;
