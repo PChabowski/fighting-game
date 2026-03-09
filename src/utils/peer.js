@@ -1,3 +1,40 @@
+export function monitorWebRTCConnection(conn) {
+    if (!conn.peerConnection) {
+        setTimeout(() => monitorWebRTCConnection(conn), 100);
+        return;
+    }
+
+    const pc = conn.peerConnection;
+
+    pc.addEventListener('iceconnectionstatechange', () => {
+        console.log(`[WebRTC] ICE Connection State: ${pc.iceConnectionState}`);
+        if (pc.iceConnectionState === 'failed') {
+            console.error("[WebRTC Error] ICE connection failed. The NAT is too strict and the TURN server failed to provide a valid relay.");
+        }
+    });
+
+    pc.addEventListener('icegatheringstatechange', () => {
+        console.log(`[WebRTC] ICE Gathering State: ${pc.iceGatheringState}`);
+    });
+
+    pc.addEventListener('signalingstatechange', () => {
+        console.log(`[WebRTC] Signaling State: ${pc.signalingState}`);
+    });
+
+    pc.addEventListener('connectionstatechange', () => {
+        console.log(`[WebRTC] Overall Connection State: ${pc.connectionState}`);
+    });
+
+    pc.addEventListener('icecandidate', (event) => {
+        if (event.candidate) {
+            console.log(`[WebRTC Candidate] Type: ${event.candidate.type} | Protocol: ${event.candidate.protocol} | Address: ${event.candidate.address}`);
+            if (event.candidate.type === 'relay') {
+                console.log("🟢 [TURN SUCCESS] Derived a 'relay' candidate! The TURN server is responding.");
+            }
+        }
+    });
+}
+
 export class PeerManager {
     constructor() {
         this.peer = null;
@@ -16,9 +53,6 @@ export class PeerManager {
                 iceServers: [
                     { urls: 'stun:stun.l.google.com:19302' },
                     { urls: 'stun:stun1.l.google.com:19302' },
-                    { urls: 'stun:stun2.l.google.com:19302' },
-                    { urls: 'stun:stun3.l.google.com:19302' },
-                    { urls: 'stun:stun4.l.google.com:19302' },
                     { 
                         urls: [
                             "turn:openrelay.metered.ca:80",
@@ -41,19 +75,17 @@ export class PeerManager {
         this.peer.on('connection', (conn) => {
             console.log('Host received connection incoming!');
             this.connection = conn;
-            // Listen for open event directly on the incoming connection for the Host
+            monitorWebRTCConnection(conn);
+            
             this.connection.on('open', () => {
                 console.log('Host-side DataConnection strictly opened!');
                 this._setupConnectionForData();
                 if (this.onConnectionCallback) this.onConnectionCallback(this.connection);
             });
+            
             this.connection.on('error', (err) => {
                console.error('Host connection error:', err);
             });
-        });
-
-        this.peer.on('error', (err) => {
-            console.error('Peer error on Host:', err);
         });
     }
 
@@ -65,9 +97,6 @@ export class PeerManager {
                 iceServers: [
                     { urls: 'stun:stun.l.google.com:19302' },
                     { urls: 'stun:stun1.l.google.com:19302' },
-                    { urls: 'stun:stun2.l.google.com:19302' },
-                    { urls: 'stun:stun3.l.google.com:19302' },
-                    { urls: 'stun:stun4.l.google.com:19302' },
                     { 
                         urls: [
                             "turn:openrelay.metered.ca:80",
@@ -85,7 +114,8 @@ export class PeerManager {
             console.log('Client Peer opened, initiating data connection to Host.');
             this.connection = this.peer.connect(id, { reliable: true });
             
-            // Listen for open event strictly on the Client side outgoing connection
+            monitorWebRTCConnection(this.connection);
+
             this.connection.on('open', () => {
                 console.log('Client-side DataConnection strictly opened!');
                 this._setupConnectionForData();
@@ -96,18 +126,10 @@ export class PeerManager {
                console.error('Client connection error:', err);
             });
         });
-
-        this.peer.on('error', (err) => {
-            console.error('Peer error on Client:', err);
-        });
     }
 
-    // Now this ONLY binds the data and close events for an ALREADY open connection
     _setupConnectionForData() {
-        console.log('Binding data streams...');
-        
         this.connection.on('data', (data) => {
-            console.log('Received data:', data);
             if (this.onDataCallback) this.onDataCallback(data);
         });
 
@@ -117,7 +139,6 @@ export class PeerManager {
     }
 
     disconnect() {
-        console.log('Disconnecting Peer and DataConnection...');
         if (this.connection) {
             this.connection.close();
             this.connection = null;
@@ -137,8 +158,6 @@ export class PeerManager {
     send(data) {
         if (this.connection && this.connection.open) {
             this.connection.send(data);
-        } else {
-            console.error('Cannot send data; connection is not open.', data);
         }
     }
 
