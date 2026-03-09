@@ -1,3 +1,5 @@
+import Peer from 'peerjs';
+
 export function monitorWebRTCConnection(conn) {
     if (!conn.peerConnection) {
         setTimeout(() => monitorWebRTCConnection(conn), 100);
@@ -47,6 +49,7 @@ export class PeerManager {
     }
 
     initHost() {
+        if (this.peer) return; // Prevent double initialization in React StrictMode
         this.isHost = true;
         this.peer = new Peer({
             config: {
@@ -90,6 +93,7 @@ export class PeerManager {
     }
 
     connectToHost(id) {
+        if (this.peer) return; // Prevent double initialization
         console.log('Client attempting to connect to host with ID:', id);
         this.isHost = false;
         this.peer = new Peer({

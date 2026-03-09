@@ -15,11 +15,12 @@ export function isMobile() {
   return isAndroid() || isIOS();
 }
 
-import { ActionButton } from '../ui/ActionButton.js';
-
 function createButton(id, text, className) {
-  const btn = new ActionButton({ id, text, className });
-  return btn.el;
+  const btn = document.createElement('button');
+  btn.id = id;
+  btn.innerText = text;
+  btn.className = className;
+  return btn;
 }
 
 export function initMobileControls(keys = {}, callbacks = {}) {
