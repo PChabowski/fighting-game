@@ -15,14 +15,10 @@ export class PeerManager {
             config: {
                 iceServers: [
                     { urls: 'stun:stun.l.google.com:19302' },
-<<<<<<< HEAD
-                    { urls: 'stun:stun1.l.google.com:19302' }
-=======
                     { urls: 'stun:stun1.l.google.com:19302' },
                     { urls: 'stun:stun2.l.google.com:19302' },
                     { urls: 'stun:stun3.l.google.com:19302' },
                     { urls: 'stun:stun4.l.google.com:19302' }
->>>>>>> fix/multiplayer
                 ]
             }
         });
@@ -37,10 +33,7 @@ export class PeerManager {
             console.log('Host received connection incoming!');
             this.connection = conn;
             this._setupConnection();
-<<<<<<< HEAD
-=======
             // DO NOT call onConnectionCallback(conn) here. Must wait for connection.on('open')
->>>>>>> fix/multiplayer
         });
 
         this.peer.on('error', (err) => {
@@ -55,14 +48,10 @@ export class PeerManager {
             config: {
                 iceServers: [
                     { urls: 'stun:stun.l.google.com:19302' },
-<<<<<<< HEAD
-                    { urls: 'stun:stun1.l.google.com:19302' }
-=======
                     { urls: 'stun:stun1.l.google.com:19302' },
                     { urls: 'stun:stun2.l.google.com:19302' },
                     { urls: 'stun:stun3.l.google.com:19302' },
                     { urls: 'stun:stun4.l.google.com:19302' }
->>>>>>> fix/multiplayer
                 ]
             }
         });
