@@ -102,7 +102,12 @@ export function initGameEngine(canvasElement, useGameStore) {
     useGameStore.subscribe((state, prevState) => {
         if (state.view === 'GAME' && prevState.view !== 'GAME') {
             startGame(state);
+        } else if (state.view !== 'GAME' && prevState.view === 'GAME') {
+            // Cleanup when leaving the game to menu/lobby
+            if (globalTimerId) clearTimeout(globalTimerId);
+            if (networkSyncId) clearInterval(networkSyncId);
         }
+        
         if (state.rematchTrigger !== prevState.rematchTrigger) {
             startGame(state);
         }
