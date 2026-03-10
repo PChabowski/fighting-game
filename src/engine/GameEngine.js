@@ -235,13 +235,28 @@ function animate() {
         player.stopHorizontal();
         enemy.stopHorizontal();
 
+        const isMultiplayer = state.isMultiplayer;
+        const isHost = state.isHost;
+        const isP1Local = !isMultiplayer || isHost;
+        const isP2Local = !isMultiplayer || !isHost;
+
+        handleGamepadInput(player, enemy, keys, {
+            jump: (fighter) => {
+                if (fighter.velocity.y === 0) fighter.velocity.y = -15;
+            },
+            restartGame: () => {
+                if (isMultiplayer) {
+                    peerManager.send({ type: 'rematch' });
+                }
+                store.getState().triggerRematch();
+            },
+            allowRestart: () => isRoundOver,
+            isMultiplayer,
+            localFighter: isHost ? player : enemy
+        });
+
         // Local PvP Movment logic
         if (!isRoundOver) {
-            const isMultiplayer = state.isMultiplayer;
-            const isHost = state.isHost;
-            const isP1Local = !isMultiplayer || isHost;
-            const isP2Local = !isMultiplayer || !isHost;
-
             if (isP1Local) {
                 if (keys.a.pressed && player.lastKey === 'a') {
                     player.moveLeft(5);

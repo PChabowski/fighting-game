@@ -2,6 +2,7 @@
 import React, { useEffect, useRef } from 'react';
 import useGameStore from './store/useGameStore';
 import { globalAudioManager } from './engine/classes/AudioManager';
+import useGamepadMenu from './hooks/useGamepadMenu';
 import Preloader from './components/Preloader';
 import GameCanvas from './components/GameCanvas';
 import GameMenu from './components/GameMenu';
@@ -14,6 +15,8 @@ import MobileOrientationModal from './components/MobileOrientationModal';
 
 function App() {
   const { view } = useGameStore();
+
+  useGamepadMenu(view); // Polling for gamepad menu navigation
 
   useEffect(() => {
     switch (view) {

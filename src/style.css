@@ -326,20 +326,42 @@ canvas {
   .dpad-container { gap: 10px; }
 }
 
-/* Hover styles for desktop (only on devices that support hover) */
+/* Hover and Focus styles for desktop and gamepad */
 @media (hover: hover) and (pointer: fine) {
   .button:hover,
-  .menu-button:hover {
+  .button:focus-visible,
+  .menu-button:hover,
+  .menu-button:focus-visible {
     color: #ff8c00;
     border-color: #ff8c00;
     transform: scale(1.02);
+    outline: none;
   }
 
-  .avatar-btn:hover img {
+  .avatar-btn:hover img,
+  .avatar-btn.focus-visible img,
+  .avatar-btn:focus-visible img {
     outline: 4px solid #ff8c00;
     outline-offset: 4px;
     transform: translateY(-4px);
   }
 
-  .avatar-btn:hover { cursor: pointer; }
+  .avatar-btn:hover,
+  .avatar-btn:focus-visible { cursor: pointer; outline: none; }
 }
+
+/* Base focus styles to ensure they work even across media queries */
+.button:focus-visible,
+.menu-button:focus-visible {
+    color: #ff8c00;
+    border-color: #ff8c00;
+    transform: scale(1.02);
+    outline: none;
+}
+
+.avatar-btn:focus-visible img {
+    outline: 4px solid #ff8c00;
+    outline-offset: 4px;
+    transform: translateY(-4px);
+}
+.avatar-btn:focus-visible { outline: none; }
