@@ -3,8 +3,8 @@ import { create } from 'zustand';
 
 // Ten sklep przechowuje globalny stan gry i udostępnia metody dla silnika
 const useGameStore = create((set) => ({
-  // Fazy gry: 'MENU', 'CHAR_SELECT', 'LOBBY', 'GAME'
-  view: 'MENU', 
+  // Fazy gry: 'PRELOAD', 'MENU', 'CHAR_SELECT', 'LOBBY', 'GAME'
+  view: 'PRELOAD', 
   
   // Dane walki
   playerHealth: 100,

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import useGameStore from '../store/useGameStore';
 import { ROSTER } from '../engine/utils/roster';
 import { peerManager } from '../engine/utils/peer';
@@ -8,10 +8,23 @@ export default function MultiplayerLobby() {
   const rosterList = Object.values(ROSTER);
 
   const [peerId, setPeerId] = useState(null);
-  const [status, setStatus] = useState(isHost ? 'Waiting for opponent...' : 'Connecting to host...');
-  
+  const [status, setStatus] = useState(isHost ? 'Waiting for player' : 'Connecting to host');
   const [localSelection, setLocalSelection] = useState(null);
   const [remoteSelection, setRemoteSelection] = useState(null);
+  const [copied, setCopied] = useState(false);
+  const [dots, setDots] = useState('');
+
+  const localSelectionRef = useRef(localSelection);
+  useEffect(() => {
+    localSelectionRef.current = localSelection;
+  }, [localSelection]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setDots(prev => prev.length >= 3 ? '' : prev + '.');
+    }, 500);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     if (isHost) {
@@ -20,7 +33,16 @@ export default function MultiplayerLobby() {
         setPeerId(id);
       });
       peerManager.onConnection(() => {
-        setStatus('Opponent connected!');
+        setStatus('Connected to player!');
+        if (localSelectionRef.current) {
+          setTimeout(() => {
+            peerManager.send({ type: 'select', characterId: localSelectionRef.current });
+          }, 500);
+        }
+      });
+      peerManager.onClose(() => {
+        setStatus('Waiting for player');
+        setRemoteSelection(null);
       });
       peerManager.onData((data) => {
         if (data.type === 'select') {
@@ -32,14 +54,21 @@ export default function MultiplayerLobby() {
       peerManager.connectToHost(targetId);
       peerManager.onConnection(() => {
         setStatus('Connected to host!');
+        if (localSelectionRef.current) {
+          setTimeout(() => {
+            peerManager.send({ type: 'select', characterId: localSelectionRef.current });
+          }, 500);
+        }
+      });
+      peerManager.onClose(() => {
+        setStatus('Connection lost. Connecting to host');
+        setRemoteSelection(null);
       });
       peerManager.onData((data) => {
         if (data.type === 'select') {
           setRemoteSelection(data.characterId);
         }
         if (data.type === 'start') {
-          // Jako klient musimy po otrzymaniu "start" wejsc do gry uwzgledniajac kto jest kto
-          // P1 to zawsze host
           useGameStore.setState({ 
             p1Character: data.p1Character, 
             p2Character: data.p2Character 
@@ -50,7 +79,7 @@ export default function MultiplayerLobby() {
     }
 
     return () => {
-      // Przy odmontowywaniu bez rozpoczęcia gry można rozłączyć piny, ale zostawmy to na 'Leave'
+      // Disconnect handled by leave
     };
   }, [isHost]);
 
@@ -80,24 +109,83 @@ export default function MultiplayerLobby() {
     setView('MULTI_MENU');
   };
 
+  const handleCopyId = () => {
+    if (peerId) {
+      navigator.clipboard.writeText(peerId);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const hostSelection = isHost ? localSelection : remoteSelection;
+  const guestSelection = isHost ? remoteSelection : localSelection;
+  const hostLabel = isHost ? 'Host (You)' : 'Host';
+  const guestLabel = isHost ? 'Player 2' : 'Player 2 (You)';
+
+  const isConnected = status.includes('Connected') || status.includes('Połączono');
+  const displayDots = !isConnected;
+
+  if (!isHost && !isConnected) {
+    return (
+      <div className="who-win" style={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        alignItems: 'center',
+        gap: '40px'
+      }}>
+        <div style={{ fontSize: '24px', textAlign: 'center' }}>
+          <span>Connecting to host</span>
+          <span style={{ display: 'inline-block', width: '40px', textAlign: 'left' }}>{dots}</span>
+        </div>
+        <button 
+          className="button menu-button" 
+          onClick={handleLeave}
+        >
+          Cancel
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="who-win" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
       <div style={{ fontSize: '24px', marginBottom: '10px' }}>Multiplayer Lobby</div>
-      <div style={{ marginBottom: '20px' }}>{status}</div>
+      <div style={{ marginBottom: '20px', color: isConnected ? '#0f0' : '#fff', textAlign: 'center' }}>
+        <span>{status}</span>
+        {displayDots && (
+          <span style={{ display: 'inline-block', width: '40px', textAlign: 'left' }}>
+            {dots}
+          </span>
+        )}
+      </div>
       
       {isHost && peerId && (
         <div style={{ marginBottom: '20px' }}>
-          Your ID: <strong>{peerId}</strong>
+          <div 
+            onClick={handleCopyId}
+            title="Click to copy"
+            style={{
+              fontSize: '14px',
+              color: '#fff',
+              backgroundColor: 'rgba(0,0,0,0.5)',
+              padding: '10px',
+              border: '2px solid white',
+              cursor: 'pointer',
+              textAlign: 'center'
+            }}
+          >
+            {copied ? 'ID Copied!' : `Your ID: ${peerId}`}
+          </div>
         </div>
       )}
 
       <div className="character-select-single">
-        <div className="char-preview">
+        <div className="char-preview" style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
           <div className="select-box">
-            You: {localSelection || '(None)'}
+            {hostLabel}: {hostSelection || '(None)'}
           </div>
           <div className="select-box">
-            Opponent: {remoteSelection || '(None)'}
+            {guestLabel}: {guestSelection || '(None)'}
           </div>
         </div>
 
@@ -107,7 +195,7 @@ export default function MultiplayerLobby() {
             if (localSelection === r.id && remoteSelection === r.id) selectionClass = 'avatar-selected-both';
             else if (localSelection === r.id) selectionClass = 'avatar-selected-player1';
             else if (remoteSelection === r.id) selectionClass = 'avatar-selected-player2';
-
+            
             return (
               <button 
                 key={r.id} 

@@ -215,6 +215,13 @@ canvas {
   border-radius: 12px;
   transition: all 0.1s ease;
   touch-action: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
   font-family: "Press Start 2P", system-ui;
   box-sizing: border-box;
   display: flex;

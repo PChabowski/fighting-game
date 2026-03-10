@@ -3,12 +3,12 @@ import { Fighter } from './classes/Fighter.js';
 import { rectangularCollision } from './utils/collision.js';
 import { handleGamepadInput } from './utils/input.js';
 import { GRAVITY, START_POSITIONS, APP_VERSION } from './utils/constants.js';
-import { isMobile, initMobileControls, removeMobileControls } from './utils/mobile.js';
+import { isMobile } from './utils/mobile.js';
 import { alignSpriteToGround } from './utils/scale.js';
 import { initResponsiveCanvas } from './utils/responsive.js';
 import { peerManager } from './utils/peer.js';
 import { NetworkFighter } from './classes/NetworkFighter.js';
-import { AudioManager } from './classes/AudioManager.js';
+import { globalAudioManager } from './classes/AudioManager.js';
 import { ROSTER } from './utils/roster.js';
 
 let canvas;
@@ -75,9 +75,8 @@ export function initGameEngine(canvasElement, useGameStore) {
     c = canvas.getContext('2d');
     store = useGameStore;
 
-    const audioManager = new AudioManager();
-    window.audioManager = audioManager;
-    audioManager.play('stage_1');
+    // Audio is now fully managed by React views (App.jsx) via globalAudioManager.
+
 
     initResponsiveCanvas(canvas);
 
@@ -174,6 +173,13 @@ function startGame(state) {
                     store.getState().updateHealth(2, enemy.health);
                     if (enemy.health <= 0) endGame();
                 }
+            } else if (data.type === 'rematch') {
+                store.getState().triggerRematch();
+            } else if (data.type === 'main_menu') {
+                peerManager.disconnect();
+                store.getState().setMultiplayer(false);
+                store.getState().resetGame();
+                store.getState().setView('MENU');
             }
         });
         
@@ -295,6 +301,15 @@ function animate() {
             player.switchSprite('idle');
             enemy.switchSprite('idle');
         }
+    }
+}
+
+export function simulateVirtualInput(key, isPressed) {
+    const event = { key };
+    if (isPressed) {
+        handleKeyDown(event);
+    } else {
+        handleKeyUp(event);
     }
 }
 

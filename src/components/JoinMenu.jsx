@@ -14,6 +14,12 @@ export default function JoinMenu() {
         placeholder="Paste ID here..."
         value={hostId}
         onChange={(e) => setHostId(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && hostId) {
+            useGameStore.setState({ remotePeerId: hostId, isHost: false });
+            setView('MULTI_LOBBY');
+          }
+        }}
         style={{
           backgroundColor: 'rgba(0, 0, 0, 0.7)',
           border: '4px solid white',

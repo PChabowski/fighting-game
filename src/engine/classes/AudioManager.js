@@ -1,9 +1,18 @@
 export class AudioManager {
     constructor() {
         this.currentTrack = null;
+        this.currentCategory = null;
+        
         this.tracks = {
-            'stage_1': new Audio('assets/music/stage_1.ogg'),
-            'boss_fight': new Audio('assets/music/boss_fight.ogg')
+            'menu_1': new Audio('assets/music/menu_1.ogg'),
+            'menu_2': new Audio('assets/music/menu_2.ogg'),
+            'battle_1': new Audio('assets/music/battle_1.ogg'),
+            'battle_2': new Audio('assets/music/battle_2.ogg')
+        };
+
+        this.categories = {
+            'menu': ['menu_1', 'menu_2'],
+            'battle': ['battle_1', 'battle_2']
         };
 
         // Initialize track settings
@@ -34,6 +43,22 @@ export class AudioManager {
         });
     }
 
+    playCategory(category) {
+        // If we are already playing a track from this category, we don't switch 
+        // to avoid restarting the track constantly while navigating menus.
+        if (this.currentCategory === category && this.currentTrack) {
+            // Ensure it's playing in case it was blocked
+            this.currentTrack.play().catch(() => {});
+            return;
+        }
+
+        this.currentCategory = category;
+        const availableTracks = this.categories[category];
+        const randomTrack = availableTracks[Math.floor(Math.random() * availableTracks.length)];
+        
+        this.play(randomTrack);
+    }
+
     play(trackName) {
         if (!this.tracks[trackName]) {
             console.warn(`Audio track '${trackName}' not found.`);
@@ -48,17 +73,14 @@ export class AudioManager {
             this.currentTrack.currentTime = 0;
         }
 
-        // Set current track BEFORE playing to ensure the interaction handler plays the most recent one
         this.currentTrack = trackToPlay;
 
         // Autoplay policy handling:
-        // Play returns a promise that may be rejected if user hasn't interacted
         const playPromise = trackToPlay.play();
         if (playPromise !== undefined) {
             playPromise.catch(error => {
-                console.warn(`Autoplay prevented for track '${trackName}'. Awaiting user interaction.`, error);
+                console.warn(`Autoplay prevented for track '${trackName}'. Awaiting user interaction.`);
                 
-                // Add a one-time global event listener to start audio on the first interaction
                 const startAudioOnInteraction = () => {
                     if (this.currentTrack) {
                         this.currentTrack.play().catch(e => console.error("Still blocked:", e));
@@ -80,6 +102,10 @@ export class AudioManager {
             this.currentTrack.pause();
             this.currentTrack.currentTime = 0;
             this.currentTrack = null;
+            this.currentCategory = null;
         }
     }
 }
+
+export const globalAudioManager = new AudioManager();
+window.audioManager = globalAudioManager;

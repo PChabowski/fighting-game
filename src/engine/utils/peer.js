@@ -45,6 +45,7 @@ export class PeerManager {
         this.onDataCallback = null;
         this.onOpenCallback = null;
         this.onConnectionCallback = null;
+        this.onCloseCallback = null;
         this.isHost = false;
     }
 
@@ -139,6 +140,7 @@ export class PeerManager {
 
         this.connection.on('close', () => {
             console.log('Connection closed');
+            if (this.onCloseCallback) this.onCloseCallback();
         });
     }
 
@@ -157,6 +159,7 @@ export class PeerManager {
         this.onDataCallback = null;
         this.onOpenCallback = null;
         this.onConnectionCallback = null;
+        this.onCloseCallback = null;
     }
 
     send(data) {
@@ -171,6 +174,10 @@ export class PeerManager {
 
     onOpen(cb) {
         this.onOpenCallback = cb;
+    }
+
+    onClose(cb) {
+        this.onCloseCallback = cb;
     }
 
     onConnection(cb) {
