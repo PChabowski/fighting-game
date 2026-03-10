@@ -1,9 +1,12 @@
-Keep a Changelog
-===============
 
-All notable changes to this project will be documented in this file.
+## [2.0.0] - 2026-03-10
 
-The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
+### Changed
+- Complete refactoring from Vanilla JS to React 19 + Vite architecture.
+- Replaced manual custom UI with React-based `.jsx` component structure utilizing Zustand for global state management.
+- Changed main entry component to `App.jsx` instead of raw `index.html` loading single module.
+- Centralized versioning system directly to use `package.json` integrated via Vite Environment `define` plugin, eliminating manual `.js` file modification flow.
+
 
 ## [1.6.0] - 2026-03-09
 

@@ -2,7 +2,7 @@ import { Sprite } from './classes/Sprite.js';
 import { Fighter } from './classes/Fighter.js';
 import { rectangularCollision } from './utils/collision.js';
 import { handleGamepadInput } from './utils/input.js';
-import { GRAVITY, START_POSITIONS, APP_VERSION } from './utils/constants.js';
+import { GRAVITY, START_POSITIONS } from './utils/constants.js';
 import { isMobile } from './utils/mobile.js';
 import { alignSpriteToGround } from './utils/scale.js';
 import { initResponsiveCanvas } from './utils/responsive.js';
@@ -322,6 +322,11 @@ function animate() {
             enemy.switchSprite('idle');
         }
     }
+
+    // Draw Version in bottom-left corner
+    c.fillStyle = 'rgba(255, 255, 255, 0.5)';
+    c.font = '10px "Press Start 2P", monospace';
+    c.fillText('v' + (typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '2.0.0'), 10, canvas.height - 10);
 }
 
 export function simulateVirtualInput(key, isPressed) {
