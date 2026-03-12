@@ -41,5 +41,27 @@ export const ROSTER = {
             death: { imageSrc: '../assets/images/Kenji/Death.png', frameMax: 7 },
         },
         attackBox: { offset: { x: 83, y: 50 }, width: 160, height: 50 },
+    },
+    Akane: {
+        id: 'Akane',
+        name: 'Akane',
+        position: { x: 450, y: 330 },
+        velocity: { x: 0, y: 0 },
+        color: 'red',
+        imageSrc: '../assets/images/Akane/Idle.png',
+        scale: 2.5,
+        frameMax: 4,
+        offset: { x: 215, y: 170 },
+        damage: 6,
+        sprites: {
+            idle: { imageSrc: '../assets/images/Akane/Idle.png', frameMax: 4 },
+            run: { imageSrc: '../assets/images/Akane/Run.png', frameMax: 8 },
+            jump: { imageSrc: '../assets/images/Akane/Jump.png', frameMax: 2 },
+            fall: { imageSrc: '../assets/images/Akane/Fall.png', frameMax: 2 },
+            attack: { imageSrc: '../assets/images/Akane/Attack1.png', frameMax: 4 },
+            takeHit: { imageSrc: '../assets/images/Akane/Take hit.png', frameMax: 3 },
+            death: { imageSrc: '../assets/images/Akane/Death.png', frameMax: 7 },
+        },
+        attackBox: { offset: { x: 30, y: 0 }, width: 160, height: 40 },
     }
 };

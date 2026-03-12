@@ -1,10 +1,10 @@
-# 🥊 JS Fighting Game - Kenji vs Mack
+# 🥊 Blood Honor - JS Fighting Game
 
 A modular 2D fighting game built with React, Vite, ES6 modules, Canvas 2D, and an online multiplayer mode powered by PeerJS.
 
 ## Version
 
-- Current release: `v2.0.0`
+- Current release: `v2.1.0`
 
 ## 🔗 Play Now
 
@@ -51,4 +51,4 @@ npm install
 npm run dev
 ```
 
-*This project was developed for educational purposes. Character sprites for Kenji and Mack are property of their respective creators.*
+*This project was developed for educational purposes. Character sprites for Kenji, Mack, and Akane are property of their respective creators.*

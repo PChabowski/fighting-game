@@ -1,5 +1,16 @@
+Keep a Changelog
+===============
 
-## [2.0.0] - 2026-03-10
+All notable changes to this project will be documented in this file.
+
+The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
+
+## [2.1.0] - 2026-03-12
+
+### Changed
+- Game officially renamed to **Blood Honor** (previously generic "Fighting Game").
+- Updated application window title (`index.html`), documentations (`README.md`), and NPM config (`package.json`) to reflect the new identity branding.
+
 
 ### Changed
 - Complete refactoring from Vanilla JS to React 19 + Vite architecture.
