@@ -1,5 +1,6 @@
 // src/App.jsx
 import React, { useEffect, useRef } from 'react';
+import { useRegisterSW } from 'virtual:pwa-register/react';
 import useGameStore from './store/useGameStore';
 import { globalAudioManager } from './engine/classes/AudioManager';
 import useGamepadMenu from './hooks/useGamepadMenu';
@@ -12,9 +13,22 @@ import MultiplayerLobby from './components/MultiplayerLobby';
 import JoinMenu from './components/JoinMenu';
 import GameInterface from './components/GameInterface';
 import MobileOrientationModal from './components/MobileOrientationModal';
+import UpdateModal from './components/ui/UpdateModal';
 
 function App() {
   const { view } = useGameStore();
+
+  const {
+    needRefresh: [needRefresh, setNeedRefresh],
+    updateServiceWorker,
+  } = useRegisterSW({
+    onRegistered(r) {
+      console.log('SW Registered: ', r);
+    },
+    onRegisterError(error) {
+      console.error('SW registration error', error);
+    },
+  });
 
   useGamepadMenu(view); // Polling for gamepad menu navigation
 
@@ -39,6 +53,12 @@ function App() {
 
   return (
     <div className="conteiner">
+      {needRefresh && (
+        <UpdateModal 
+          onConfirm={() => updateServiceWorker(true)} 
+          onCancel={() => setNeedRefresh(false)} 
+        />
+      )}
       {view === 'PRELOAD' && <Preloader />}
       {/* Elementy nakładane (Menu/WinModal itp.) powinny zajmować cały ekran lub korzystać z display: none, 
           w przypadku starej logiki modale/menu korzystały z klasy .who-win aby wyświetlać się na środku ekranu. */}

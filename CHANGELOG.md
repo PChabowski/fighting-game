@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [2.2.0] - 2026-03-12
+
+### Added
+- **PWA Support**: The game can now be installed as a standalone full-screen application on mobile (iOS/Android) and desktop environments.
+- **Offline Mode**: Enabled basic offline play using Service Worker caching for assets and engine logic.
+- **Update Notification**: Added `UpdateModal` to inform users when a new version of the game is available without abruptly refreshing the page.
+
+### Changed
+- Fixed viewport interactions on mobile by adding `touch-action: none` and `user-select: none` to the CSS, preventing unwanted browser scrolling and zoom gestures during gameplay.
+
 ## [2.1.0] - 2026-03-12
 
 ### Changed
