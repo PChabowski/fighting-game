@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [2.2.0] - 2026-03-12
+
+### Added
+- **PWA Support**: The game can now be installed as a standalone full-screen application on mobile (iOS/Android) and desktop environments.
+- **Offline Mode**: Enabled basic offline play using Service Worker caching for assets and engine logic.
+- **Update Notification**: Added `UpdateModal` to inform users when a new version of the game is available without abruptly refreshing the page.
+
+### Changed
+- Fixed viewport interactions on mobile by adding `touch-action: none` and `user-select: none` to the CSS, preventing unwanted browser scrolling and zoom gestures during gameplay.
+
+## [2.1.0] - 2026-03-12
+
+### Changed
+- Game officially renamed to **Blood Honor** (previously generic "Fighting Game").
+- Updated application window title (`index.html`), documentations (`README.md`), and NPM config (`package.json`) to reflect the new identity branding.
+
+
+### Changed
+- Complete refactoring from Vanilla JS to React 19 + Vite architecture.
+- Replaced manual custom UI with React-based `.jsx` component structure utilizing Zustand for global state management.
+- Changed main entry component to `App.jsx` instead of raw `index.html` loading single module.
+- Centralized versioning system directly to use `package.json` integrated via Vite Environment `define` plugin, eliminating manual `.js` file modification flow.
+
+
+## [1.6.0] - 2026-03-09
+
+### Added
+- Updated fighter damage handling and roster configuration for improved gameplay.
+
 ## [1.5.0] - 2026-03-08
 
 ### Added
