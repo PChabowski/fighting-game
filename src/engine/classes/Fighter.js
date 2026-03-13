@@ -11,14 +11,16 @@ export class Fighter extends Sprite {
         offset = { x: 0, y: 0 },
         damage = 5,
         sprites,
-        attackBox = { offset: {}, width: undefined, height: undefined }
+        attackBox = { offset: {}, width: undefined, height: undefined },
+        colorFilter = 'none'
     }) {
         super({
             position,
             imageSrc,
             scale,
             frameMax,
-            offset
+            offset,
+            colorFilter
         });
 
         this.velocity = velocity;

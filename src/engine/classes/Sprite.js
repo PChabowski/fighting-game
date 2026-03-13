@@ -4,7 +4,8 @@ export class Sprite {
         imageSrc, 
         scale = 1, 
         frameMax = 1, 
-        offset = {x: 0, y: 0 }
+        offset = {x: 0, y: 0 },
+        colorFilter = 'none'
     }) {
         this.position = position;
         this.height = 150;
@@ -19,6 +20,7 @@ export class Sprite {
         this.framesHold = 7;
         this.offset = offset;
         this.facing = 'right';
+        this.colorFilter = colorFilter;
     }
 
     draw(c) {
@@ -28,6 +30,10 @@ export class Sprite {
         const scaledWidth = singleFrameWidth * this.scale;
 
         c.save(); 
+        
+        if (this.colorFilter !== 'none') {
+            c.filter = this.colorFilter;
+        }
 
         if (this.facing === 'left') {
             c.translate(this.position.x - this.offset.x + scaledWidth, 0);

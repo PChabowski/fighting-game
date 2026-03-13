@@ -157,10 +157,13 @@ function startGame(state) {
         };
     };
 
+    const isSameCharacter = p1Choice === p2Choice;
+    const enemyFilterStyle = isSameCharacter ? 'grayscale(100%) brightness(75%) contrast(120%)' : 'none';
+
     if (state.isMultiplayer) {
         const isHost = state.isHost;
         player = new NetworkFighter(getFighterConfig(ROSTER[p1Choice], START_POSITIONS.player, { isRemote: !isHost }));
-        enemy = new NetworkFighter(getFighterConfig(ROSTER[p2Choice], START_POSITIONS.enemy, { isRemote: isHost }));
+        enemy = new NetworkFighter(getFighterConfig(ROSTER[p2Choice], START_POSITIONS.enemy, { isRemote: isHost, colorFilter: enemyFilterStyle }));
         
         peerManager.onData((data) => {
             if (data.type === 'stateUpdate') {
@@ -202,9 +205,9 @@ function startGame(state) {
         player = new Fighter(getFighterConfig(ROSTER[p1Choice], START_POSITIONS.player));
         
         if (state.gameMode === 'ARCADE') {
-            enemy = new Enemy(getFighterConfig(ROSTER[p2Choice], START_POSITIONS.enemy, { reactionTime: 20 }));
+            enemy = new Enemy(getFighterConfig(ROSTER[p2Choice], START_POSITIONS.enemy, { reactionTime: 20, colorFilter: enemyFilterStyle }));
         } else {
-            enemy = new Fighter(getFighterConfig(ROSTER[p2Choice], START_POSITIONS.enemy));
+            enemy = new Fighter(getFighterConfig(ROSTER[p2Choice], START_POSITIONS.enemy, { colorFilter: enemyFilterStyle }));
         }
     }
 

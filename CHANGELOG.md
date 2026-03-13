@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [2.4.0] - 2026-03-13
+
+### Added
+- **Mirror Match Mode**: Added dark/shadow tinting (`grayscale(100%) brightness(75%) contrast(120%)`) for Player 2 (or AI) when both players select the same character, improving visual clarity in both Arcade and PVP modes.
+
 ## [2.3.0] - 2026-03-13
 
 ### Added
