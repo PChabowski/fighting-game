@@ -12,19 +12,26 @@ export default function GameMenu() {
         <div>Menu</div>
         <button 
           className="button menu-button" 
-          onClick={() => setView('CHAR_SELECT')} // temporarily mapping Arcade to CHAR_SELECT
+          onClick={() => {
+            useGameStore.getState().setGameMode('ARCADE');
+            setView('CHAR_SELECT');
+          }}
         >
           Arcade Mode
         </button>
         <button 
           className="button menu-button" 
-          onClick={() => setView('CHAR_SELECT')}
+          onClick={() => {
+            useGameStore.getState().setGameMode('PVP');
+            setView('CHAR_SELECT');
+          }}
         >
           Player vs Player
         </button>
         <button 
           className="button menu-button" 
           onClick={() => {
+             useGameStore.getState().setGameMode('PVP'); // Multiplayer has it's own flag, but defaults to PVP
              useGameStore.getState().setMultiplayer(true);
              setView('MULTI_MENU');
           }}

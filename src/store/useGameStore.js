@@ -11,6 +11,7 @@ const useGameStore = create((set) => ({
   enemyHealth: 100,
   timer: 60,
   winner: null, // np. 'Player 1', 'Player 2', 'Tie'
+  gameMode: 'PVP', // 'PVP' lub 'ARCADE'
   
   // Dane multiplayera
   isMultiplayer: false,
@@ -26,6 +27,7 @@ const useGameStore = create((set) => ({
   // Akcje do wywoływania z poziomu interfejsu React
   setView: (newView) => set({ view: newView }),
   setMultiplayer: (val) => set({ isMultiplayer: val }),
+  setGameMode: (mode) => set({ gameMode: mode }),
   setConnectionData: (peerId, conn) => set({ peerId, connection: conn }),
   
   // Akcje do wywoływania z poziomu silnika Canvas/JavaScript

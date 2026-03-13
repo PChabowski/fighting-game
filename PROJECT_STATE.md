@@ -45,6 +45,7 @@ This document describes the current architecture and implementation of the React
 │   │   ├── GameEngine.js       # Game Loop & Scene Management
 │   │   ├── classes/            # Object Oriented entities
 │   │   │   ├── AudioManager.js
+│   │   │   ├── Enemy.js        # AI Fighter extension with FSM
 │   │   │   ├── Fighter.js
 │   │   │   ├── NetworkFighter.js
 │   │   │   └── Sprite.js
@@ -82,6 +83,7 @@ UI is built strictly in React.
 #### Engine & Classes (`src/engine/`)
 The `GameEngine.js` initializes `Sprites` and `Fighters`, handles collisions, input, networking, and invokes Zustand actions (e.g. `useGameStore.getState().setPlayerHealth()`) to sync data back to the React UI hooks.
 - **`Sprite` & `Fighter`**: Core logic is very similar to the old Vanilla version, preserving manual `canvas` drawing and animation states.
+- **`Enemy`**: Extends `Fighter` with a Finite State Machine (FSM) AI logic to battle the player in Arcade mode. Features target-finding capabilities, cooldown management, overlap unblocking, and jumping/dodging techniques.
 - **`NetworkFighter`**: Extends logic to buffer incoming remote state from PeerJS for smooth multiplayer handling.
 
 ### Networking & Multiplayer

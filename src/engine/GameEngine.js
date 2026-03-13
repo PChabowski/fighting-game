@@ -1,5 +1,6 @@
 import { Sprite } from './classes/Sprite.js';
 import { Fighter } from './classes/Fighter.js';
+import { Enemy } from './classes/Enemy.js';
 import { rectangularCollision } from './utils/collision.js';
 import { handleGamepadInput } from './utils/input.js';
 import { GRAVITY, START_POSITIONS } from './utils/constants.js';
@@ -199,7 +200,12 @@ function startGame(state) {
         }, 1000 / 30);
     } else {
         player = new Fighter(getFighterConfig(ROSTER[p1Choice], START_POSITIONS.player));
-        enemy = new Fighter(getFighterConfig(ROSTER[p2Choice], START_POSITIONS.enemy));
+        
+        if (state.gameMode === 'ARCADE') {
+            enemy = new Enemy(getFighterConfig(ROSTER[p2Choice], START_POSITIONS.enemy, { reactionTime: 20 }));
+        } else {
+            enemy = new Fighter(getFighterConfig(ROSTER[p2Choice], START_POSITIONS.enemy));
+        }
     }
 
     alignSpriteToGround(player, canvas.height);
@@ -278,17 +284,22 @@ function animate() {
             }
 
             if (isP2Local) {
-                const leftKey = isMultiplayer ? 'a' : 'ArrowLeft';
-                const rightKey = isMultiplayer ? 'd' : 'ArrowRight';
-
-                if (keys[leftKey].pressed && enemy.lastKey === leftKey) {
-                    enemy.moveLeft(5);
-                    enemy.switchSprite('run');
-                } else if (keys[rightKey].pressed && enemy.lastKey === rightKey) {
-                    enemy.moveRight(5);
-                    enemy.switchSprite('run');
+                if (state.gameMode === 'ARCADE' && typeof enemy.updateAI === 'function') {
+                    // AI controls itself
+                    enemy.updateAI([player]);
                 } else {
-                    enemy.switchSprite('idle');
+                    const leftKey = isMultiplayer ? 'a' : 'ArrowLeft';
+                    const rightKey = isMultiplayer ? 'd' : 'ArrowRight';
+
+                    if (keys[leftKey].pressed && enemy.lastKey === leftKey) {
+                        enemy.moveLeft(5);
+                        enemy.switchSprite('run');
+                    } else if (keys[rightKey].pressed && enemy.lastKey === rightKey) {
+                        enemy.moveRight(5);
+                        enemy.switchSprite('run');
+                    } else {
+                        enemy.switchSprite('idle');
+                    }
                 }
 
                 if (enemy.velocity.y < 0) enemy.switchSprite('jump');

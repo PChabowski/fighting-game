@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [2.3.0] - 2026-03-13
+
+### Added
+- **Intelligent FSM-based AI Opponent**: Added the `Enemy` class extending `Fighter` to serve as a smart bot in the updated Arcade Mode.
+- **AI Behaviors**: The bot utilizes a Finite State Machine to transition between states: `APPROACH`, `ATTACK`, `RETREAT`, and `IDLE`.
+- **Advanced Combat Tactics**: 
+  - Dynamic orientation tracking prevents the bot from "moonwalking" or attacking backward.
+  - Active overlap repulsion prevents the bot from getting stuck inside the player and missing attacks.
+  - The AI smartly utilizes jumps to occasionally close long distances, counter aggressive play, or dodge tight collisions.
+- The `useGameStore` now distinguishes between `PVP` and `ARCADE` game modes.
+
+### Fixed
+- Fixed an issue where receiving hits (`takeHit`) could interrupt normal attack loop resets in `Fighter.js`, causing the attacker to ghost-attack and permanently freeze. `takeHit` now firmly overrides `isAttacking`.
+
 ## [2.2.3] - 2026-03-13
 
 ### Fixed

@@ -166,6 +166,7 @@ export class Fighter extends Sprite {
 
     takeHit(damage = 20) {
         this.health -= damage;
+        this.isAttacking = false; // Przerywa trwający atak, by nie zadawać fałszywych ciosów po oberwaniu
         if (this.health <= 0) {
             this.switchSprite('death');
         } else {
@@ -221,22 +222,18 @@ export class Fighter extends Sprite {
                 }
                 break;
             case 'attack':
-                if (this.image !== this.sprites.attack.image) {
-                    this.image = this.sprites.attack.image;
-                    this.frameMax = this.sprites.attack.frameMax;
-                    this.framesCurrent = 0;
-                    
-                    if (window.audioManager) {
-                        window.audioManager.playSoundEffect('attack');
-                    }
+                this.image = this.sprites.attack.image;
+                this.frameMax = this.sprites.attack.frameMax;
+                this.framesCurrent = 0;
+                
+                if (window.audioManager) {
+                    window.audioManager.playSoundEffect('attack');
                 }
                 break;
             case 'takeHit':
-                if (this.image !== this.sprites.takeHit.image) {
-                    this.image = this.sprites.takeHit.image;
-                    this.frameMax = this.sprites.takeHit.frameMax;
-                    this.framesCurrent = 0;
-                }
+                this.image = this.sprites.takeHit.image;
+                this.frameMax = this.sprites.takeHit.frameMax;
+                this.framesCurrent = 0;
                 break;
             case 'death':
                 if (this.image !== this.sprites.death.image) {

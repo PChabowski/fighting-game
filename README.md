@@ -4,7 +4,7 @@ A modular 2D fighting game built with React, Vite, ES6 modules, Canvas 2D, and a
 
 ## Version
 
-- Current release: `v2.2.3`
+- Current release: `v2.3.0`
 
 ## 🔗 Play Now
 
@@ -37,8 +37,8 @@ The project has been refactored into a React/Vite modular architecture utilizing
 
 - **React Architecture**: Fully managed standard modern web app setup.
 - **PWA Support**: Installable as a standalone app on iOS, Android, and Desktop with offline caching capabilities.
-- Arcade and local PvP game modes.
-- Online multiplayer with Host/Join lobby flow.
+- Arcade mode with an intelligent FSM-based AI opponent.
+- Local PvP and Online multiplayer with Host/Join lobby flow.
 - Character selection with shared roster and per-character animations.
 - Keyboard, gamepad, and mobile touch controls.
 - Responsive canvas with fixed internal resolution (`1024x576`) and CSS scaling.
