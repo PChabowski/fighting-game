@@ -111,9 +111,37 @@ export default function MultiplayerLobby() {
 
   const handleCopyId = () => {
     if (peerId) {
-      navigator.clipboard.writeText(peerId);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(peerId)
+          .then(() => {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+          })
+          .catch(err => console.error('Kopiowanie nie powiodło się:', err));
+      } else {
+        // Fallback dla starszych przeglądarek lub połączeń przez HTTP (np. sieć lokalna LAN)
+        const textArea = document.createElement("textarea");
+        textArea.value = peerId;
+        
+        // Ukrywamy element
+        textArea.style.position = "fixed";
+        textArea.style.left = "-9999px";
+        textArea.style.top = "-9999px";
+        
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        try {
+          document.execCommand('copy');
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        } catch (err) {
+          console.error('Kopiowanie awaryjne nie powiodło się', err);
+        }
+        
+        document.body.removeChild(textArea);
+      }
     }
   };
 

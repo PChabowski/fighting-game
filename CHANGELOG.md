@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [2.2.2] - 2026-03-13
+
+### Changed
+- Unified keyboard controls in Multiplayer mode: both Host and Guest now use `W, A, S, D` and `Space` for movement and attacking. Arrow keys are now ignored during online matches to prevent control conflicts.
+
+### Fixed
+- Fixed mobile controls for Guest players in Multiplayer mode by routing input globally to the modernized WASD engine mapping.
+- Added a fallback copy method for the "Copy ID" button in the Multiplayer Lobby to support browsers connecting via local network HTTP (non-secure context).
+- Fixed input delay on mobile touch controls by adding `touch-action: manipulation`, disabling the browser's native double-tap zoom delay on game buttons.
+
 ## [2.2.1] - 2026-03-13
 
 ### Fixed

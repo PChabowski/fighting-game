@@ -16,13 +16,12 @@ export default function MobileControls() {
 
   if (!shouldRender) return null;
 
-  // Determine correct keys based on player assignment.
-  // In multiplayer, the guest ALWAYS controls Player 2 logic locally using Arrow keys in the Canvas Engine.
-  const isP2 = isMultiplayer && !isHost;
-  const KEY_LEFT = isP2 ? 'ArrowLeft' : 'a';
-  const KEY_RIGHT = isP2 ? 'ArrowRight' : 'd';
-  const KEY_JUMP = isP2 ? 'ArrowUp' : 'w';
-  const KEY_ATTACK = isP2 ? 'ArrowDown' : ' ';
+  // Since the game engine now maps WASD/Space to the local fighter (regardless of host/guest),
+  // mobile controls can simply always dispatch these global keys.
+  const KEY_LEFT = 'a';
+  const KEY_RIGHT = 'd';
+  const KEY_JUMP = 'w';
+  const KEY_ATTACK = ' ';
 
   const handleTouchStart = (key) => (e) => {
     e.preventDefault();

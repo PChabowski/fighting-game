@@ -233,6 +233,9 @@ canvas {
   justify-content: center;
   text-align: center;
   overflow: visible;
+  /* Eliminacja domyślnych opóźnień przeglądarki podczas przesuwania palca (tzw zjawiska "double-tap zoom") 
+     Wymuszamy by tapnięcia były natychmiast uznawane za akcję manipulacyjną */
+  touch-action: manipulation;
 }
 
 .mobile-btn:active,

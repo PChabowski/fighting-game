@@ -278,10 +278,13 @@ function animate() {
             }
 
             if (isP2Local) {
-                if (keys.ArrowLeft.pressed && enemy.lastKey === 'ArrowLeft') {
+                const leftKey = isMultiplayer ? 'a' : 'ArrowLeft';
+                const rightKey = isMultiplayer ? 'd' : 'ArrowRight';
+
+                if (keys[leftKey].pressed && enemy.lastKey === leftKey) {
                     enemy.moveLeft(5);
                     enemy.switchSprite('run');
-                } else if (keys.ArrowRight.pressed && enemy.lastKey === 'ArrowRight') {
+                } else if (keys[rightKey].pressed && enemy.lastKey === rightKey) {
                     enemy.moveRight(5);
                     enemy.switchSprite('run');
                 } else {
@@ -353,24 +356,24 @@ function handleKeyDown(event) {
     const isMultiplayer = state.isMultiplayer;
     const isHost = state.isHost;
 
+    const localFighter = (isMultiplayer && !isHost) ? enemy : player;
+
     switch (event.key) {
-        case 'd': if (isMultiplayer && !isHost) break; keys.d.pressed = true; player.lastKey = 'd'; break;
-        case 'a': if (isMultiplayer && !isHost) break; keys.a.pressed = true; player.lastKey = 'a'; break;
-        case 'w': if (isMultiplayer && !isHost) break; if (player.velocity.y === 0) player.velocity.y = -15; break;
-        case 's': if (isMultiplayer && !isHost) break; keys.s.pressed = true; player.lastKey = 's'; break;
+        case 'd': keys.d.pressed = true; localFighter.lastKey = 'd'; break;
+        case 'a': keys.a.pressed = true; localFighter.lastKey = 'a'; break;
+        case 'w': if (localFighter.velocity.y === 0) localFighter.velocity.y = -15; break;
+        case 's': keys.s.pressed = true; localFighter.lastKey = 's'; break;
         case ' ': 
-            if (isMultiplayer && !isHost) break; 
-            player.attack(); 
+            localFighter.attack(); 
             if (isMultiplayer) peerManager.send({ type: 'attack' });
             break;
 
-        case 'ArrowRight': if (isMultiplayer && isHost) break; keys.ArrowRight.pressed = true; enemy.lastKey = 'ArrowRight'; break;
-        case 'ArrowLeft': if (isMultiplayer && isHost) break; keys.ArrowLeft.pressed = true; enemy.lastKey = 'ArrowLeft'; break;
-        case 'ArrowUp': if (isMultiplayer && isHost) break; if (enemy.velocity.y === 0) enemy.velocity.y = -15; break;
+        case 'ArrowRight': if (isMultiplayer) break; keys.ArrowRight.pressed = true; enemy.lastKey = 'ArrowRight'; break;
+        case 'ArrowLeft': if (isMultiplayer) break; keys.ArrowLeft.pressed = true; enemy.lastKey = 'ArrowLeft'; break;
+        case 'ArrowUp': if (isMultiplayer) break; if (enemy.velocity.y === 0) enemy.velocity.y = -15; break;
         case 'ArrowDown': 
-            if (isMultiplayer && isHost) break; 
+            if (isMultiplayer) break; 
             enemy.select ? enemy.select() : enemy.attack(); 
-            if (isMultiplayer) peerManager.send({ type: 'attack' });
             break;
     }
 }
@@ -380,16 +383,18 @@ function handleKeyUp(event) {
     const isMultiplayer = state ? state.isMultiplayer : false;
     const isHost = state ? state.isHost : true;
 
-    switch (event.key) {
-        case 'd': if (isMultiplayer && !isHost) break; keys.d.pressed = false; break;
-        case 'a': if (isMultiplayer && !isHost) break; keys.a.pressed = false; break;
-        case 'w': if (isMultiplayer && !isHost) break; keys.w.pressed = false; break;
-        case 's': if (isMultiplayer && !isHost) break; keys.s.pressed = false; break;
-        case ' ': if (isMultiplayer && !isHost) break; if (player) player.canAttack = true; break;
+    const localFighter = (isMultiplayer && !isHost) ? enemy : player;
 
-        case 'ArrowRight': if (isMultiplayer && isHost) break; keys.ArrowRight.pressed = false; break;
-        case 'ArrowLeft': if (isMultiplayer && isHost) break; keys.ArrowLeft.pressed = false; break;
-        case 'ArrowUp': if (isMultiplayer && isHost) break; keys.ArrowUp.pressed = false; break;
-        case 'ArrowDown': if (isMultiplayer && isHost) break; if (enemy) enemy.canAttack = true; break;
+    switch (event.key) {
+        case 'd': keys.d.pressed = false; break;
+        case 'a': keys.a.pressed = false; break;
+        case 'w': keys.w.pressed = false; break;
+        case 's': keys.s.pressed = false; break;
+        case ' ': if (localFighter) localFighter.canAttack = true; break;
+
+        case 'ArrowRight': if (isMultiplayer) break; keys.ArrowRight.pressed = false; break;
+        case 'ArrowLeft': if (isMultiplayer) break; keys.ArrowLeft.pressed = false; break;
+        case 'ArrowUp': if (isMultiplayer) break; keys.ArrowUp.pressed = false; break;
+        case 'ArrowDown': if (isMultiplayer) break; if (enemy) enemy.canAttack = true; break;
     }
 }
