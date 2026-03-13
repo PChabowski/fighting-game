@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [2.2.3] - 2026-03-13
+
+### Fixed
+- Fixed the `MobileOrientationModal` issue where installed PWA apps on Android were incorrectly prompted to activate Fullscreen mode. The modal now intelligently detects PWA `standalone`/`fullscreen` display modes and suppresses unnecessary browser API requests.
+
 ## [2.2.2] - 2026-03-13
 
 ### Changed
