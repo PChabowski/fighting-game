@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [2.5.0] - 2026-03-15
+
+### Added
+- Added Google Analytics `gtag.js` tag to `index.html` to enable site analytics collection.
+
+### Changed
+- Prepared release for deployment: bumped package version to `2.5.0`.
+
 ## [2.4.0] - 2026-03-13
 
 ### Added

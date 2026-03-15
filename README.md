@@ -4,7 +4,7 @@ A modular 2D fighting game built with React, Vite, ES6 modules, Canvas 2D, and a
 
 ## Version
 
-- Current release: `v2.4.0`
+- Current release: `v2.5.0`
 
 ## 🔗 Play Now
 
