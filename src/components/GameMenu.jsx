@@ -41,14 +41,14 @@ export default function GameMenu() {
         </button>
 
         {/* Authors link (styled identical to other menu buttons) */}
-        <Link
-          to="/authors"
-          className="button menu-button"
-          onClick={() => setView('MENU')}
-          style={{ textDecoration: 'none', color: 'initial', fontSize: '13px' }}
-        >
-          Authors
-        </Link>
+            <Link
+              to="/authors"
+              className="button menu-button"
+              onClick={() => setView('MENU')}
+              style={{ textDecoration: 'none', color: 'initial', fontSize: '13px', display: 'none' }}
+            >
+              Authors
+            </Link>
       </div>
     </>
   );
