@@ -17,6 +17,15 @@ body {
   position: relative;
 }
 
+/* Page article layout: centered and consistent width across pages */
+.conteiner > article {
+  width: 100%;
+  max-width: 720px;
+  padding: 16px;
+  margin: 64px auto 24px; /* keep article below the Back button and centered */
+  color: white;
+}
+
 canvas {
   display: block;
   /* allow canvas to take its intrinsic pixel size, but keep it centered */

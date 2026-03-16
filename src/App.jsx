@@ -14,23 +14,15 @@ import JoinMenu from './components/JoinMenu';
 import GameInterface from './components/GameInterface';
 import MobileOrientationModal from './components/MobileOrientationModal';
 import UpdateModal from './components/ui/UpdateModal';
+import { Routes, Route } from 'react-router-dom';
+import Authors from './pages/Authors';
+import Privacy from './pages/Privacy';
 
-function App() {
-  const { view } = useGameStore();
+// Keep MainViews stable across App re-renders to avoid remounting GameCanvas
+function MainViews({ needRefresh, setNeedRefresh, updateServiceWorker }) {
+  const view = useGameStore(state => state.view);
 
-  const {
-    needRefresh: [needRefresh, setNeedRefresh],
-    updateServiceWorker,
-  } = useRegisterSW({
-    onRegistered(r) {
-      console.log('SW Registered: ', r);
-    },
-    onRegisterError(error) {
-      console.error('SW registration error', error);
-    },
-  });
-
-  useGamepadMenu(view); // Polling for gamepad menu navigation
+  useGamepadMenu(view);
 
   useEffect(() => {
     switch (view) {
@@ -50,7 +42,6 @@ function App() {
     }
   }, [view]);
 
-
   return (
     <div className="conteiner">
       {needRefresh && (
@@ -61,7 +52,7 @@ function App() {
       )}
       {view === 'PRELOAD' && <Preloader />}
       {/* Elementy nakładane (Menu/WinModal itp.) powinny zajmować cały ekran lub korzystać z display: none, 
-          w przypadku starej logiki modale/menu korzystały z klasy .who-win aby wyświetlać się na środku ekranu. */}
+          w przypadku starej logiki modale/menu korzystały z klasy .who-win aby wyświetla się na środku ekranu. */}
       {view === 'MENU' && <GameMenu />}
       {view === 'CHAR_SELECT' && <CharacterSelect />}
       {view === 'MULTI_MENU' && <MultiplayerMenu />}
@@ -73,6 +64,30 @@ function App() {
       {/* Game Engine rendering layer */}
       <GameCanvas />
     </div>
+  );
+}
+
+function App() {
+  const { view } = useGameStore();
+
+  const {
+    needRefresh: [needRefresh, setNeedRefresh],
+    updateServiceWorker,
+  } = useRegisterSW({
+    onRegistered(r) {
+      console.log('SW Registered: ', r);
+    },
+    onRegisterError(error) {
+      console.error('SW registration error', error);
+    },
+  });
+
+  return (
+    <Routes>
+      <Route path="/authors" element={<Authors />} />
+      <Route path="/privacy" element={<Privacy />} />
+      <Route path="/*" element={<MainViews needRefresh={needRefresh} setNeedRefresh={setNeedRefresh} updateServiceWorker={updateServiceWorker} />} />
+    </Routes>
   );
 }
 
