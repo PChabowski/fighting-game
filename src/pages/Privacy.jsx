@@ -15,7 +15,14 @@ export default function Privacy() {
 
   return (
     <div className="conteiner">
-      <button className="button menu-button" onClick={goBack} style={{ position: 'absolute', top: 12, left: 12 }}>Back</button>
+      <button
+        className="button"
+        onClick={goBack}
+        style={{ position: 'absolute', top: 12, left: 12 }}
+        aria-label="Go back"
+      >
+        ← Back
+      </button>
       <article>
         <h1>Privacy Policy</h1>
         <p>This is a short privacy placeholder. Replace with your real policy later.</p>

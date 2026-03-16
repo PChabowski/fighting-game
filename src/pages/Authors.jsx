@@ -22,7 +22,14 @@ export default function Authors() {
 
   return (
     <div className="conteiner">
-      <button className="button menu-button" onClick={goBack} style={{ position: 'absolute', top: 12, left: 12 }}>Back</button>
+      <button
+        className="button"
+        onClick={goBack}
+        style={{ position: 'absolute', top: 12, left: 12 }}
+        aria-label="Go back"
+      >
+        ← Back
+      </button>
       <article>
         <h1>Game Authors</h1>
         <h3>Author</h3>

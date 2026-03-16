@@ -1,12 +1,11 @@
 // src/components/GameMenu.jsx
 import React from 'react';
 import useGameStore from '../store/useGameStore';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 // To be added: AudioManager
 
 export default function GameMenu() {
   const setView = useGameStore(state => state.setView);
-  const navigate = useNavigate();
 
   return (
     <>
@@ -41,17 +40,15 @@ export default function GameMenu() {
           Multiplayer
         </button>
 
-        {/* Authors button (styled identical to other menu buttons) */}
-        <button
+        {/* Authors link (styled identical to other menu buttons) */}
+        <Link
+          to="/authors"
           className="button menu-button"
-          onClick={() => {
-            // navigate to authors page
-            setView('MENU');
-            navigate('/authors');
-          }}
+          onClick={() => setView('MENU')}
+          style={{ textDecoration: 'none', color: 'initial', fontSize: '13px' }}
         >
           Authors
-        </button>
+        </Link>
       </div>
     </>
   );
