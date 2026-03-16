@@ -17,6 +17,7 @@ import UpdateModal from './components/ui/UpdateModal';
 import { Routes, Route } from 'react-router-dom';
 import Authors from './pages/Authors';
 import Privacy from './pages/Privacy';
+import CookieBanner from './components/CookieBanner';
 
 // Keep MainViews stable across App re-renders to avoid remounting GameCanvas
 function MainViews({ needRefresh, setNeedRefresh, updateServiceWorker }) {
@@ -83,11 +84,14 @@ function App() {
   });
 
   return (
-    <Routes>
-      <Route path="/authors" element={<Authors />} />
-      <Route path="/privacy" element={<Privacy />} />
-      <Route path="/*" element={<MainViews needRefresh={needRefresh} setNeedRefresh={setNeedRefresh} updateServiceWorker={updateServiceWorker} />} />
-    </Routes>
+    <>
+      <CookieBanner />
+      <Routes>
+        <Route path="/authors" element={<Authors />} />
+        <Route path="/privacy" element={<Privacy />} />
+        <Route path="/*" element={<MainViews needRefresh={needRefresh} setNeedRefresh={setNeedRefresh} updateServiceWorker={updateServiceWorker} />} />
+      </Routes>
+    </>
   );
 }
 
