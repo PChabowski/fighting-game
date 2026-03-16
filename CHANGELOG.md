@@ -12,7 +12,6 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Changed
 - Prepared release for deployment: bumped package version to `2.5.0`.
-
 ## [2.6.0] - 2026-03-16
 
 ### Added
@@ -24,6 +23,13 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - Stabilized main views to avoid remounting the game canvas (prevents HP rollback/visual flash during navigation).
 - Mobile-friendly cookie banner layout and UI polish.
 
+## [2.5.0] - 2026-03-15
+
+### Added
+- Added Google Analytics `gtag.js` tag to `index.html` to enable site analytics collection.
+
+### Changed
+- Prepared release for deployment: bumped package version to `2.5.0`.
 
 ## [2.4.0] - 2026-03-13
 
