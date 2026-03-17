@@ -45,7 +45,7 @@ export default function GameMenu() {
               to="/authors"
               className="button menu-button"
               onClick={() => setView('MENU')}
-              style={{ textDecoration: 'none', color: 'initial', fontSize: '13px', display: 'none' }}
+              style={{ textDecoration: 'none', color: 'initial', fontSize: '13px'}}
             >
               Authors
             </Link>
