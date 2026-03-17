@@ -1,0 +1,18 @@
+.scrollable {
+  /* Make the container a full-viewport scrollable area */
+  display: block;
+  height: 100vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: auto; /* enable touch scrolling inside this element */
+}
+
+/* Optional: make sure article content can grow and scroll */
+.scrollable > article {
+  display: block;
+  /* Add extra bottom padding so content doesn't get hidden behind mobile UI */
+  padding-bottom: 56px;
+  box-sizing: border-box;
+  /* ensure article can expand vertically inside the scrollable container */
+  min-height: 100%;
+}

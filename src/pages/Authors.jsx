@@ -3,6 +3,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import useGameStore from "../store/useGameStore";
 import "../style.css";
+import styles from "../styles/mobile.module.css";
 
 const contributors = [
   // Fill with real contributors/asset authors later
@@ -21,7 +22,7 @@ export default function Authors() {
   }
 
   return (
-    <div className="conteiner">
+    <div className={`conteiner ${styles.scrollable}`}>
       <button
         className="button"
         onClick={goBack}

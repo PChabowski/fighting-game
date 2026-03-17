@@ -3,6 +3,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import useGameStore from '../store/useGameStore';
 import '../style.css';
+import styles from '../styles/mobile.module.css';
 
 export default function Privacy() {
   const navigate = useNavigate();
@@ -14,7 +15,7 @@ export default function Privacy() {
   }
 
   return (
-    <div className="conteiner">
+    <div className={`conteiner ${styles.scrollable}`}>
       <button
         className="button"
         onClick={goBack}
