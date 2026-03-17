@@ -4,11 +4,11 @@ A modular 2D fighting game built with React, Vite, ES6 modules, Canvas 2D, and a
 
 ## Version
 
-- Current release: `v2.6.0`
+- Current release: `v2.6.1`
 
 ## 🔗 Play Now
 
-The game is live and playable at: [**https://pchabowski-fighting-game.netlify.app/**](https://pchabowski-fighting-game.netlify.app/)
+The game is live and playable at: [**https://bloodhonor.netlify.app/**](https://bloodhonor.netlify.app/)
 
 ## 📁 Project Structure
 

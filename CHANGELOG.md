@@ -7,6 +7,16 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [2.6.0] - 2026-03-16
 
+## [2.6.1] - 2026-03-17
+
+### Fixed
+- Improved native mobile scrolling for `Authors` and `Privacy` pages; added bottom padding to avoid hidden footer content.
+- Updated authors list: removed LavaFlame2 and added Artem Brullov.
+
+### Added
+- Added Google Search Console verification meta tag to `index.html`.
+
+
 ### Added
 - React Router integration with two static pages: `/authors` and `/privacy`.
 - Cookie consent banner with settings modal and persistent preferences (localStorage).
