@@ -25,36 +25,30 @@ export class NetworkFighter extends Fighter {
         this._lastRestartTime = Date.now();
     }
 
-    update(c, canvas, gravity) {
-        this.draw(c);
-        if (!this.dead) this.animateFrames();
-
-        // Update attackBox orientation based on facing
-        if (this.facing === 'right') {
-            this.attackBox.position.x = this.position.x + this.attackBox.offset.x;
-        } else {
-            this.attackBox.position.x = this.position.x + this.width - this.attackBox.width - this.attackBox.offset.x;
-        }
-        this.attackBox.position.y = this.position.y + this.attackBox.offset.y;
-
+    update(c, levelConfig, gravity) {
         if (!this.isRemote) {
-            // Local physics logic
-            if (this.velocity.x > 0) this.facing = 'right';
-            else if (this.velocity.x < 0) this.facing = 'left';
-
-            this.position.x += this.velocity.x;
-            this.position.y += this.velocity.y;
-
-            const groundY = canvas.height - 96;
-            if (this.position.y + this.height + this.velocity.y >= groundY) {
-                this.velocity.y = 0;
-                this.position.y = groundY - this.height;
-            } else {
-                this.velocity.y += gravity;
-            }
+            // Skrypt lokalny taki jak w Fighter.js 
+            super.update(c, levelConfig, gravity);
         } else {
-            // Remote interpolation
+            // Animacja i rysunek klatek
+            this.draw(c);
+            if (!this.dead) this.animateFrames();
+
+            // Orientacja collision-boxow
+            if (this.facing === 'right') {
+                this.attackBox.position.x = this.position.x + this.attackBox.offset.x;
+            } else {
+                this.attackBox.position.x = this.position.x + this.width - this.attackBox.width - this.attackBox.offset.x;
+            }
+            this.attackBox.position.y = this.position.y + this.attackBox.offset.y;
+
+            // Interpolacja ruchu sieciowego
             this.interpolate(0.2);
+            
+            // Konieczny reset stanow takich jak Dodge (niezbędne do animacji/hitboxów)
+            if (this.isDodging && this.image !== this.sprites.dodge?.image) {
+                this.isDodging = false;
+            }
         }
     }
 
@@ -70,7 +64,9 @@ export class NetworkFighter extends Fighter {
     getState() {
         const state = super.getState();
         state.isAttacking = this.isAttacking;
+        state.isHeavyAttack = this.isHeavyAttack;
         state.facing = this.facing;
+        state.framesHold = this.framesHold;
         return state;
     }
 
@@ -95,6 +91,8 @@ export class NetworkFighter extends Fighter {
         if (typeof data.health === 'number') this.health = data.health;
         if (typeof data.dead === 'boolean') this.dead = data.dead;
         if (typeof data.framesCurrent === 'number') this.framesCurrent = data.framesCurrent;
+        if (typeof data.framesHold === 'number') this.framesHold = data.framesHold;
         if (typeof data.isAttacking === 'boolean') this.isAttacking = data.isAttacking;
+        if (typeof data.isHeavyAttack === 'boolean') this.isHeavyAttack = data.isHeavyAttack;
     }
 }

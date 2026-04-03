@@ -2,15 +2,19 @@ import React, { useEffect, useState, useRef } from 'react';
 import useGameStore from '../store/useGameStore';
 import { ROSTER } from '../engine/utils/roster';
 import { peerManager } from '../engine/utils/peer';
+import { LEVELS, DEFAULT_LEVEL } from '../engine/scenes/index';
 
 export default function MultiplayerLobby() {
   const { setView, isHost } = useGameStore();
   const rosterList = Object.values(ROSTER);
+  const mapList = Object.values(LEVELS);
 
   const [peerId, setPeerId] = useState(null);
   const [status, setStatus] = useState(isHost ? 'Waiting for player' : 'Connecting to host');
   const [localSelection, setLocalSelection] = useState(null);
   const [remoteSelection, setRemoteSelection] = useState(null);
+  const [activeMap, setActiveMap] = useState(DEFAULT_LEVEL);
+  const [showMapSelect, setShowMapSelect] = useState(false);
   const [copied, setCopied] = useState(false);
   const [dots, setDots] = useState('');
 
@@ -69,6 +73,9 @@ export default function MultiplayerLobby() {
           setRemoteSelection(data.characterId);
         }
         if (data.type === 'start') {
+          if (data.levelId) {
+            useGameStore.getState().setSelectedLevel(data.levelId);
+          }
           useGameStore.setState({ 
             p1Character: data.p1Character, 
             p2Character: data.p2Character 
@@ -90,10 +97,14 @@ export default function MultiplayerLobby() {
 
   const handleStart = () => {
     if (!localSelection || !remoteSelection) return;
+    
+    useGameStore.getState().setSelectedLevel(activeMap);
+    
     peerManager.send({ 
       type: 'start', 
       p1Character: localSelection, 
-      p2Character: remoteSelection 
+      p2Character: remoteSelection,
+      levelId: activeMap
     });
     
     useGameStore.setState({ 
@@ -175,6 +186,36 @@ export default function MultiplayerLobby() {
     );
   }
 
+  if (showMapSelect && isHost) {
+    return (
+      <div className="who-win" style={{ display: 'flex', flexDirection: 'column', gap: '20px', alignItems: 'center' }}>
+        <div style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '10px' }}>Select Map</div>
+        <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', flexWrap: 'wrap', maxWidth: '600px' }}>
+          {mapList.map((map) => (
+            <button
+              key={map.id}
+              onClick={() => setActiveMap(map.id)}
+              style={{
+                cursor: 'pointer',
+                background: activeMap === map.id ? 'rgba(0, 255, 0, 0.3)' : 'rgba(255,255,255,0.1)',
+                border: activeMap === map.id ? '2px solid lime' : '1px solid #fff',
+                padding: '15px',
+                minWidth: '150px'
+              }}
+            >
+              <div style={{ fontWeight: 'bold', fontSize: '18px' }}>{map.name}</div>
+            </button>
+          ))}
+        </div>
+        <div style={{ display: 'flex', gap: '20px', marginTop: '20px' }}>
+          <button className="button menu-button" onClick={() => setShowMapSelect(false)}>
+            Back to Select
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="who-win" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
       <div style={{ fontSize: '24px', marginBottom: '10px' }}>Multiplayer Lobby</div>
@@ -245,6 +286,15 @@ export default function MultiplayerLobby() {
         >
           Leave Lobby
         </button>
+
+        {isHost && (
+          <button 
+            className="button menu-button" 
+            onClick={() => setShowMapSelect(true)}
+          >
+            Select Map
+          </button>
+        )}
 
         {isHost && (
           <button 

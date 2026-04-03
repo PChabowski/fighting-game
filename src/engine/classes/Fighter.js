@@ -41,7 +41,10 @@ export class Fighter extends Sprite {
         };
         this.damage = damage;
         this.color = color;
-        this.isAttacking;
+        this.isAttacking = false;
+        this.isDodging = false;
+        this.isHeavyAttack = false;
+        this.canDoubleJump = true;
         this.health = 100;
         this.framesCurrent = 0;
         this.framesElapsed = 0;
@@ -69,6 +72,9 @@ export class Fighter extends Sprite {
         this.velocity = { x: 0, y: 0 };
         this.canAttack = true;
         this.isAttacking = false;
+        this.isHeavyAttack = false;
+        this.isDodging = false;
+        this.canDoubleJump = true;
         this.framesElapsed = 0;
         this.framesCurrent = 0;
         
@@ -80,7 +86,7 @@ export class Fighter extends Sprite {
         }
     }
 
-    update(c, canvas, gravity) {
+    update(c, levelConfig, gravity) {
         this.draw(c);
         if (!this.dead) this.animateFrames();
 
@@ -98,27 +104,68 @@ export class Fighter extends Sprite {
         this.position.x += this.velocity.x;
         this.position.y += this.velocity.y;
 
-        const groundY = canvas.height - 96;
-        if (this.position.y + this.height + this.velocity.y >= groundY) {
+        // Platform / Gravity collisions
+        let standing = false;
+        let groundY = null;
+
+        if (levelConfig.platforms) {
+            // Find platform immediately below
+            for (let platform of levelConfig.platforms) {
+                const isWithinX =
+                    this.position.x + this.width / 2 >= platform.x &&
+                    this.position.x + this.width / 2 <= platform.x + platform.width;
+
+                const fighterBottom = this.position.y + this.height;
+                const wasAbove = fighterBottom - this.velocity.y <= platform.y;
+                const goesBelow = fighterBottom >= platform.y;
+
+                if (this.velocity.y >= 0 && isWithinX && wasAbove && goesBelow) {
+                    standing = true;
+                    groundY = platform.y;
+                    break;
+                }
+            }
+        }
+
+        if (standing && groundY !== null) {
             this.velocity.y = 0;
-            // place the fighter standing on the ground (respecting its height)
             this.position.y = groundY - this.height;
+            this.canDoubleJump = true;
         } else {
             this.velocity.y += gravity;
+        }
+        
+        // Reset flags at the end of their animations
+        if (this.isDodging && this.image !== this.sprites.dodge?.image) {
+            this.isDodging = false;
         }
     }
 
     // Input-facing methods: allow external input handlers to control the fighter
     moveLeft(speed = 5) {
+        if (this.dead) return;
         this.velocity.x = -Math.abs(speed);
     }
 
     moveRight(speed = 5) {
+        if (this.dead) return;
         this.velocity.x = Math.abs(speed);
     }
 
     stopHorizontal() {
+        if (this.dead) { this.velocity.x = 0; return; }
         this.velocity.x = 0;
+    }
+
+    jump(power = 15) {
+        if (this.dead) return;
+        if (this.velocity.y === 0) {
+            this.velocity.y = -power;
+            this.canDoubleJump = true;
+        } else if (this.canDoubleJump) {
+            this.velocity.y = -power;
+            this.canDoubleJump = false;
+        }
     }
 
     // Return a plain object representing the state needed for networking sync
@@ -154,7 +201,7 @@ export class Fighter extends Sprite {
     }
 
     attack() {
-        if (!this.canAttack || this.dead) return;
+        if (!this.canAttack || this.dead || this.isDodging) return;
 
         if (
             this.image === this.sprites.attack.image && 
@@ -163,10 +210,49 @@ export class Fighter extends Sprite {
 
         this.switchSprite('attack');
         this.isAttacking = true;
+        this.isHeavyAttack = false;
         this.canAttack = false;
     }
 
+    heavyAttack() {
+        if (!this.canAttack || this.dead || this.isDodging) return;
+
+        if (
+            this.image === this.sprites.heavyAttack?.image && 
+            this.framesCurrent < this.sprites.heavyAttack?.frameMax - 1
+        ) return;
+
+        // Jeśli nie ma spritea heavyAttack, użyj zwykłego ataku jako placeholder,
+        // ale w zwolnionym tempie (framesHold x 1.7)
+        if (this.sprites.heavyAttack) {
+            this.switchSprite('heavyAttack');
+        } else {
+            this.switchSprite('attack');
+            this.framesHold = Math.floor(7 * 1.7); // standard is 7
+        }
+        
+        this.isAttacking = true;
+        this.isHeavyAttack = true;
+        this.canAttack = false;
+    }
+
+    dodge() {
+        if (!this.canAttack || this.dead || this.isAttacking) return;
+        
+        if (this.sprites.dodge) {
+            this.switchSprite('dodge');
+        } else {
+            // Placeholder: przyciemnij / zmień tint by zasugerować dodge
+            this.switchSprite('idle');
+            // Pamiętaj, że w realnej logice isDodging anuluje hitbox, nawet bez pełnej animacji
+        }
+        this.isDodging = true;
+        this.canAttack = false; 
+    }
+
     takeHit(damage = 20) {
+        if (this.isDodging) return; // Uniki posiadają i-frames
+        
         this.health -= damage;
         this.isAttacking = false; // Przerywa trwający atak, by nie zadawać fałszywych ciosów po oberwaniu
         if (this.health <= 0) {
@@ -190,9 +276,28 @@ export class Fighter extends Sprite {
 
         if (
             sprite !== 'death' &&
+            this.sprites.heavyAttack &&
+            this.image === this.sprites.heavyAttack.image && 
+            this.framesCurrent < this.sprites.heavyAttack.frameMax - 1
+        ) return;
+
+        if (
+            sprite !== 'death' &&
+            this.sprites.dodge &&
+            this.image === this.sprites.dodge.image && 
+            this.framesCurrent < this.sprites.dodge.frameMax - 1
+        ) return;
+
+        if (
+            sprite !== 'death' &&
             this.image === this.sprites.takeHit.image && 
             this.framesCurrent < this.sprites.takeHit.frameMax - 1
         ) return;
+
+        // Reset framesHold po ataku
+        if (sprite !== 'attack' && sprite !== 'heavyAttack') {
+            this.framesHold = 7;
+        }
 
         switch (sprite) {
             case 'idle':
@@ -228,6 +333,24 @@ export class Fighter extends Sprite {
                 this.frameMax = this.sprites.attack.frameMax;
                 this.framesCurrent = 0;
                 
+                if (window.audioManager) {
+                    window.audioManager.playSoundEffect('attack');
+                }
+                break;
+                // Check dodge
+            case 'dodge':
+                if (this.sprites.dodge) {
+                    this.image = this.sprites.dodge.image;
+                    this.frameMax = this.sprites.dodge.frameMax;
+                    this.framesCurrent = 0;
+                }
+                break;
+            case 'heavyAttack':
+                if (this.sprites.heavyAttack) {
+                    this.image = this.sprites.heavyAttack.image;
+                    this.frameMax = this.sprites.heavyAttack.frameMax;
+                    this.framesCurrent = 0;
+                }
                 if (window.audioManager) {
                     window.audioManager.playSoundEffect('attack');
                 }

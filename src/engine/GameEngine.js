@@ -3,7 +3,7 @@ import { Fighter } from './classes/Fighter.js';
 import { Enemy } from './classes/Enemy.js';
 import { rectangularCollision } from './utils/collision.js';
 import { handleGamepadInput } from './utils/input.js';
-import { GRAVITY, START_POSITIONS } from './utils/constants.js';
+import { GRAVITY } from './utils/constants.js';
 import { isMobile } from './utils/mobile.js';
 import { alignSpriteToGround } from './utils/scale.js';
 import { initResponsiveCanvas } from './utils/responsive.js';
@@ -11,6 +11,7 @@ import { peerManager } from './utils/peer.js';
 import { NetworkFighter } from './classes/NetworkFighter.js';
 import { globalAudioManager } from './classes/AudioManager.js';
 import { ROSTER } from './utils/roster.js';
+import { LEVELS, DEFAULT_LEVEL } from './scenes/index.js';
 
 let canvas;
 let c;
@@ -20,6 +21,8 @@ let player = null;
 let enemy = null;
 let background;
 let shop;
+let currentLevelConfig;
+let camera = { x: 0, y: 0 };
 
 let isRoundOver = false;
 let globalTimer = 60;
@@ -63,8 +66,9 @@ function endGame() {
     store.getState().setWinner(winnerMsg);
 }
 
-function calculateHit(attacker, defender, playerNum) {
-    defender.takeHit(attacker.damage);
+function calculateHit(attacker, defender, playerNum, damageOverride = null) {
+    const finalDamage = damageOverride !== null ? damageOverride : attacker.damage;
+    defender.takeHit(finalDamage);
     store.getState().updateHealth(playerNum, defender.health);
     if (defender.health <= 0) {
         endGame();
@@ -107,6 +111,13 @@ export function initGameEngine(canvasElement, useGameStore) {
             // Cleanup when leaving the game to menu/lobby
             if (globalTimerId) clearTimeout(globalTimerId);
             if (networkSyncId) clearInterval(networkSyncId);
+            currentLevelConfig = null;
+            camera = { x: 0, y: 0 };
+            background.image.src = '/assets/images/background.png'.replace(/^\.\/img\//, '../assets/images/');
+            if (shop) {
+                shop.position.x = shop.basePosition.x;
+                handleResize();
+            }
         }
         
         if (state.rematchTrigger !== prevState.rematchTrigger) {
@@ -118,9 +129,8 @@ export function initGameEngine(canvasElement, useGameStore) {
 }
 
 function handleResize() {
-    if (player) alignSpriteToGround(player, canvas.height);
-    if (enemy) alignSpriteToGround(enemy, canvas.height);
-    if (shop) {
+    // With platforms and death zones we no longer rely strictly on aligning everyone to canvas.height floor 
+    if (shop && !currentLevelConfig) {
         shop.canvasHeight = canvas.height;
         alignSpriteToGround(shop, canvas.height);
     }
@@ -134,6 +144,20 @@ function startGame(state) {
     
     store.getState().resetGame();
     store.getState().setTimer(globalTimer);
+
+    // Initialize Level
+    const levelId = state.selectedLevel || DEFAULT_LEVEL;
+    currentLevelConfig = LEVELS[levelId] || LEVELS[DEFAULT_LEVEL];
+    
+    background = new Sprite({
+        position: { x: 0, y: 0 },
+        imageSrc: currentLevelConfig.background,
+    });
+    
+    // Play level music if requested and audio manager exists
+    // (Assuming `globalAudioManager` has playMusic method, or React handles it. 
+    // Wait, earlier code said "Audio is now fully managed by React views", so let's stick to doing nothing or play via global param)
+    // if (globalAudioManager) globalAudioManager.playMusic('background');
 
     // Initialize players based on selection
     const p1Choice = state.p1Character || 'Mack';
@@ -162,16 +186,25 @@ function startGame(state) {
 
     if (state.isMultiplayer) {
         const isHost = state.isHost;
-        player = new NetworkFighter(getFighterConfig(ROSTER[p1Choice], START_POSITIONS.player, { isRemote: !isHost }));
-        enemy = new NetworkFighter(getFighterConfig(ROSTER[p2Choice], START_POSITIONS.enemy, { isRemote: isHost, colorFilter: enemyFilterStyle }));
+        player = new NetworkFighter(getFighterConfig(ROSTER[p1Choice], currentLevelConfig.startPositions.player, { isRemote: !isHost }));
+        enemy = new NetworkFighter(getFighterConfig(ROSTER[p2Choice], currentLevelConfig.startPositions.enemy, { isRemote: isHost, colorFilter: enemyFilterStyle }));
         
         peerManager.onData((data) => {
             if (data.type === 'stateUpdate') {
                 if (isHost && enemy) enemy.receiveState(data.state);
                 if (!isHost && player) player.receiveState(data.state);
+            } else if (data.type === 'jump') {
+                if (isHost && enemy) enemy.jump();
+                if (!isHost && player) player.jump();
             } else if (data.type === 'attack') {
-                if (isHost && enemy) { enemy.attack(); enemy.isAttacking = true; }
-                if (!isHost && player) { player.attack(); player.isAttacking = true; }
+                if (isHost && enemy) { enemy.attack(); }
+                if (!isHost && player) { player.attack(); }
+            } else if (data.type === 'heavyAttack') {
+                if (isHost && enemy) { enemy.heavyAttack && enemy.heavyAttack(); }
+                if (!isHost && player) { player.heavyAttack && player.heavyAttack(); }
+            } else if (data.type === 'dodge') {
+                if (isHost && enemy) { enemy.dodge && enemy.dodge(); }
+                if (!isHost && player) { player.dodge && player.dodge(); }
             } else if (data.type === 'hit') {
                 if (data.target === 1 && player) {
                     player.takeHit(data.damage);
@@ -202,17 +235,18 @@ function startGame(state) {
             }
         }, 1000 / 30);
     } else {
-        player = new Fighter(getFighterConfig(ROSTER[p1Choice], START_POSITIONS.player));
+        player = new Fighter(getFighterConfig(ROSTER[p1Choice], currentLevelConfig.startPositions.player));
         
         if (state.gameMode === 'ARCADE') {
-            enemy = new Enemy(getFighterConfig(ROSTER[p2Choice], START_POSITIONS.enemy, { reactionTime: 20, colorFilter: enemyFilterStyle }));
+            enemy = new Enemy(getFighterConfig(ROSTER[p2Choice], currentLevelConfig.startPositions.enemy, { reactionTime: 20, colorFilter: enemyFilterStyle }));
         } else {
-            enemy = new Fighter(getFighterConfig(ROSTER[p2Choice], START_POSITIONS.enemy, { colorFilter: enemyFilterStyle }));
+            enemy = new Fighter(getFighterConfig(ROSTER[p2Choice], currentLevelConfig.startPositions.enemy, { colorFilter: enemyFilterStyle }));
         }
     }
 
-    alignSpriteToGround(player, canvas.height);
-    alignSpriteToGround(enemy, canvas.height);
+    // No longer snap to ground automatically, allow levels to spawn mid air
+    // alignSpriteToGround(player, canvas.height);
+    // alignSpriteToGround(enemy, canvas.height);
 
     tickTimer();
 }
@@ -223,28 +257,94 @@ function animate() {
     const state = store ? store.getState() : null;
     const isGameActive = state && state.view === 'GAME' && !isRoundOver;
     
+    // Calculate Camera Position
+    if (player && enemy && currentLevelConfig) {
+        const isMultiplayer = state ? state.isMultiplayer : false;
+        const isHost = state ? state.isHost : true;
+        const localFighter = (isMultiplayer && !isHost) ? enemy : player;
+
+        let targetCamX = 0;
+        let targetCamY = 0;
+
+        if (isMultiplayer) {
+            // Camera follows local fighter
+            targetCamX = (localFighter.position.x + localFighter.width/2) - canvas.width / 2;
+            const targetY = (localFighter.position.y + localFighter.height/2);
+            targetCamY = targetY - canvas.height / 2;
+        } else {
+            // Camera tracks both X, but anchors Y near the ground (lowest player's head/waist)
+            const midX = (player.position.x + player.width/2 + enemy.position.x + enemy.width/2) / 2;
+            const maxHeelsY = Math.max(player.position.y + player.height, enemy.position.y + enemy.height);
+            
+            targetCamX = midX - canvas.width / 2;
+            // Adjust camera so the lowest feet are roughly near the bottom 25% of the screen
+            targetCamY = maxHeelsY - (canvas.height * 0.75);
+        }
+        
+        // Simple lerp for smooth camera
+        camera.x += (targetCamX - camera.x) * 0.1;
+        camera.y += (targetCamY - camera.y) * 0.1;
+        
+        // Clamp to level boundaries (optional but good practice)
+        if (camera.x < 0) camera.x = 0;
+        if (camera.y < 0) camera.y = 0;
+        if (currentLevelConfig.worldWidth && camera.x + canvas.width > currentLevelConfig.worldWidth) 
+            camera.x = currentLevelConfig.worldWidth - canvas.width;
+        if (currentLevelConfig.worldHeight && camera.y + canvas.height > currentLevelConfig.worldHeight) 
+            camera.y = currentLevelConfig.worldHeight - canvas.height;
+    }
+
     c.fillStyle = 'black';
     c.fillRect(0, 0, canvas.width, canvas.height);
 
+    c.save();
+    c.translate(-Math.floor(camera.x), -Math.floor(camera.y));
+
     if (background && background.image && background.image.complete && background.image.naturalWidth) {
         const img = background.image;
-        const scale = canvas.height / img.height;
+        const worldHeight = currentLevelConfig ? currentLevelConfig.worldHeight : canvas.height;
+        const worldWidth = currentLevelConfig ? currentLevelConfig.worldWidth : canvas.width;
+        
+        const scale = worldHeight ? (worldHeight / img.height) : (canvas.height / img.height);
         const scaledWidth = Math.round(img.width * scale);
+        const drawHeight = worldHeight || canvas.height;
+        const drawWidth = worldWidth || canvas.width;
+        
         if (scaledWidth > 0) {
-            for (let x = 0; x < canvas.width; x += scaledWidth) {
-                c.drawImage(img, 0, 0, img.width, img.height, x, 0, scaledWidth, canvas.height);
+            for (let x = 0; x < drawWidth; x += scaledWidth) {
+                c.drawImage(img, 0, 0, img.width, img.height, x, 0, scaledWidth, drawHeight);
             }
         }
     }
 
-    if (shop) shop.update(c);
+    if (shop) {
+        if (currentLevelConfig && currentLevelConfig.shopPosition && shop.image.complete) {
+            shop.position.x = currentLevelConfig.shopPosition.x;
+            shop.position.y = currentLevelConfig.shopPosition.y - (shop.image.height * shop.scale);
+        } else if (!currentLevelConfig) {
+            // fall back to default behavior for main menu
+            shop.position.x = shop.basePosition.x;
+        }
+        shop.update(c);
+    }
     
+    // Draw platforms directly or rely on background. Just a quick debug draw for platforms:
+    if (currentLevelConfig && currentLevelConfig.platforms) {
+        c.fillStyle = 'rgba(100, 100, 100, 0.8)';
+        for (let p of currentLevelConfig.platforms) {
+            c.fillRect(p.x, p.y, p.width, p.height);
+        }
+    }
+    
+    // Overlay semi-transparent
     c.fillStyle = 'rgba(255, 255, 255, 0.15)';
-    c.fillRect(0, 0, canvas.width, canvas.height);
+    const overlayWidth = currentLevelConfig ? (currentLevelConfig.worldWidth || canvas.width) : canvas.width;
+    const overlayHeight = currentLevelConfig ? (currentLevelConfig.worldHeight || canvas.height) : canvas.height;
+    c.fillRect(0, 0, overlayWidth, overlayHeight);
 
     if (state && state.view === 'GAME' && player && enemy) {
-        player.update(c, canvas, GRAVITY);
-        enemy.update(c, canvas, GRAVITY);
+        player.update(c, currentLevelConfig, GRAVITY);
+        enemy.update(c, currentLevelConfig, GRAVITY);
 
         player.stopHorizontal();
         enemy.stopHorizontal();
@@ -254,9 +354,23 @@ function animate() {
         const isP1Local = !isMultiplayer || isHost;
         const isP2Local = !isMultiplayer || !isHost;
 
+        // Death Zone check properly hitting health points & UI
+        if (!isRoundOver) {
+            if (currentLevelConfig && currentLevelConfig.deathZoneY) {
+                if (isP1Local && player.position.y > currentLevelConfig.deathZoneY && player.health > 0) {
+                    calculateHit({ damage: 9999 }, player, 1, 9999);
+                    if (isMultiplayer) peerManager.send({ type: 'hit', target: 1, damage: 9999 });
+                }
+                if (isP2Local && enemy.position.y > currentLevelConfig.deathZoneY && enemy.health > 0) {
+                    calculateHit({ damage: 9999 }, enemy, 2, 9999);
+                    if (isMultiplayer) peerManager.send({ type: 'hit', target: 2, damage: 9999 });
+                }
+            }
+        }
+
         handleGamepadInput(player, enemy, keys, {
             jump: (fighter) => {
-                if (fighter.velocity.y === 0) fighter.velocity.y = -15;
+                fighter.jump();
             },
             restartGame: () => {
                 if (isMultiplayer) {
@@ -317,8 +431,9 @@ function animate() {
                 player.isAttacking && player.framesCurrent === Math.floor(pAttackMax / 2)) {
                 player.isAttacking = false;
                 if (!isMultiplayer || isP1Local) {
-                    calculateHit(player, enemy, 2);
-                    if (isMultiplayer) peerManager.send({ type: 'hit', target: 2, damage: player.damage });
+                    const dmg = player.isHeavyAttack ? player.damage * 2 : player.damage;
+                    calculateHit(player, enemy, 2, dmg);
+                    if (isMultiplayer) peerManager.send({ type: 'hit', target: 2, damage: dmg });
                 }
             }
             if (player.isAttacking && player.framesCurrent === pAttackMax - 1) player.isAttacking = false;
@@ -327,8 +442,9 @@ function animate() {
                 enemy.isAttacking && enemy.framesCurrent === Math.floor(eAttackMax / 2)) {
                 enemy.isAttacking = false;
                 if (!isMultiplayer || isP2Local) {
-                    calculateHit(enemy, player, 1);
-                    if (isMultiplayer) peerManager.send({ type: 'hit', target: 1, damage: enemy.damage });
+                    const dmg = enemy.isHeavyAttack ? enemy.damage * 2 : enemy.damage;
+                    calculateHit(enemy, player, 1, dmg);
+                    if (isMultiplayer) peerManager.send({ type: 'hit', target: 1, damage: dmg });
                 }
             }
             if (enemy.isAttacking && enemy.framesCurrent === eAttackMax - 1) enemy.isAttacking = false;
@@ -340,7 +456,9 @@ function animate() {
         }
     }
 
-    // Draw Version in bottom-left corner
+    c.restore();
+
+    // Draw Version in bottom-left corner (Overlay UI fixed on screen)
     c.fillStyle = 'rgba(255, 255, 255, 0.5)';
     c.font = '10px "Press Start 2P", monospace';
     c.fillText('v' + (typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '2.0.0'), 10, canvas.height - 10);
@@ -375,19 +493,38 @@ function handleKeyDown(event) {
     switch (event.key) {
         case 'd': keys.d.pressed = true; localFighter.lastKey = 'd'; break;
         case 'a': keys.a.pressed = true; localFighter.lastKey = 'a'; break;
-        case 'w': if (localFighter.velocity.y === 0) localFighter.velocity.y = -15; break;
+        case 'w': 
+            localFighter.jump(); 
+            if (isMultiplayer) peerManager.send({ type: 'jump' });
+            break;
         case 's': keys.s.pressed = true; localFighter.lastKey = 's'; break;
         case ' ': 
             localFighter.attack(); 
             if (isMultiplayer) peerManager.send({ type: 'attack' });
             break;
+        case 'e':
+            localFighter.heavyAttack && localFighter.heavyAttack();
+            if (isMultiplayer) peerManager.send({ type: 'heavyAttack' });
+            break;
+        case 'f':
+            localFighter.dodge && localFighter.dodge();
+            if (isMultiplayer) peerManager.send({ type: 'dodge' });
+            break;
 
         case 'ArrowRight': if (isMultiplayer) break; keys.ArrowRight.pressed = true; enemy.lastKey = 'ArrowRight'; break;
         case 'ArrowLeft': if (isMultiplayer) break; keys.ArrowLeft.pressed = true; enemy.lastKey = 'ArrowLeft'; break;
-        case 'ArrowUp': if (isMultiplayer) break; if (enemy.velocity.y === 0) enemy.velocity.y = -15; break;
+        case 'ArrowUp': if (isMultiplayer) break; enemy.jump(); break;
         case 'ArrowDown': 
             if (isMultiplayer) break; 
             enemy.select ? enemy.select() : enemy.attack(); 
+            break;
+        case 'm':
+            if (isMultiplayer) break;
+            enemy.heavyAttack && enemy.heavyAttack();
+            break;
+        case 'n':
+            if (isMultiplayer) break;
+            enemy.dodge && enemy.dodge();
             break;
     }
 }
@@ -405,10 +542,14 @@ function handleKeyUp(event) {
         case 'w': keys.w.pressed = false; break;
         case 's': keys.s.pressed = false; break;
         case ' ': if (localFighter) localFighter.canAttack = true; break;
+        case 'e': if (localFighter) localFighter.canAttack = true; break;
+        case 'f': if (localFighter) localFighter.canAttack = true; break;
 
         case 'ArrowRight': if (isMultiplayer) break; keys.ArrowRight.pressed = false; break;
         case 'ArrowLeft': if (isMultiplayer) break; keys.ArrowLeft.pressed = false; break;
         case 'ArrowUp': if (isMultiplayer) break; keys.ArrowUp.pressed = false; break;
         case 'ArrowDown': if (isMultiplayer) break; if (enemy) enemy.canAttack = true; break;
+        case 'm': if (isMultiplayer) break; if (enemy) enemy.canAttack = true; break;
+        case 'n': if (isMultiplayer) break; if (enemy) enemy.canAttack = true; break;
     }
 }

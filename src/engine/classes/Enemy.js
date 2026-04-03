@@ -45,12 +45,6 @@ export class Enemy extends Fighter {
         return closestPlayer;
     }
 
-    jump() {
-        if (this.velocity.y === 0) {
-            this.velocity.y = -15;
-        }
-    }
-
     updateAI(targets) {
         if (!this.aiActive || this.dead) {
             this.stopHorizontal();
