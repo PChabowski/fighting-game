@@ -49,29 +49,24 @@ Controls are consistent across modes. The engine maps keyboard and mobile inputs
 
 - Keyboard:
 	- Movement: `A` / `D` (left/right)
-	- Jump: `W`
-	- Light attack: `Space`
-	- Heavy (strong) attack: `E`
-	- Dodge: `F`
+        - Jump / Double Jump: `W` (tap twice to double jump)
+        - Light attack: `Space`
+        - Heavy (strong) attack: `E`
+        - Dodge (I-Frames/Moonwalk): `F`
 
 - Gamepad (recommended mapping):
-	- Jump: `A` / D-Pad Up (button 0)
-	- Light attack: `X` (button 2)
-	- Heavy (strong) attack: `B` / `Circle` (button 1)
-	- Dodge: `Y` / `Triangle` or Bumpers (button 3,4,5)
+        - Jump / Double Jump: `A` / D-Pad Up (button 0)
+        - Light attack: `X` (button 2)
+        - Heavy (strong) attack: `B` / `Circle` (button 1)
+        - Dodge: `Y` / `Triangle` or Bumpers (button 3,4,5)
 
 - Mobile/touch overlay:
-	- On mobile the on-screen buttons map to the same keys (`A/D` for movement, `J` for jump (maps to `W`), `A` attack (Space), `S` heavy attack (E), `D` dodge (F)).
+        - On mobile the on-screen buttons map to the same keys (`A/D` for movement, `J` for jump/double-jump, `A` light attack, `S` heavy attack, `D` dodge).
 
 Gameplay notes:
-- Strong attack is a slower, higher-damage attack — use the heavy attack button (`E` / gamepad B) when you have time to commit the move.
-- Dodge performs a quick back-step; it now plays the moonwalk/back-step animation and avoids incoming attacks when timed correctly.
-
-
-## 🛠️ Build and RUN
-
-You can run this project locally:
-
+- **Strong Attack**: A slower, punishing attack yielding higher frames of commitment. Use the heavy attack button when an opening presents itself.
+- **Dodge (Moonwalk)**: Executes a quick, backwards moonwalk sequence rendering you momentarily invincible (I-Frames). Doing so prevents taking damage, but puts the dodge skill on a 1-second cooldown.
+- **Double Jump**: You can now jump a second time while in mid-air to reach higher platforms in expanded stage scenes or evade grounded tracking AI.
 ```bash
 npm install
 npm run dev

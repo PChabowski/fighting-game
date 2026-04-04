@@ -8,17 +8,23 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 ## [2.7.0] - 2026-04-04
 
 ### Added
-- Platform texture support and updated platform scenes (`src/engine/scenes/*`) to accept textures and interactions.
-- Dodge/back-step animation (moonwalk) and improved dodge behavior for fighters.
-- Preparatory groundwork for platform interactions (control takeover, flag pickup mechanics).
+- **Double Jump Mechanic**: Fighters can now perform a mid-air double jump allowing for greater vertical mobility (`src/engine/classes/Fighter.js`).
+- **Heavy/Strong Attack**: Slower, high-damage attack variant (`heavyAttack`). Added to engine state, mapped to key `E`, Gamepad B/Circle, and mobile `S` button.
+- **I-Frames & Dodge (Moonwalk)**: Evasion mechanics overhauled. Dodging (Key `F`, Gamepad Y/Triangle) grants 25 visual frames of invincibility (I-Frames, `globalAlpha = 0.5`), forcibly slides the character backwards resembling a moonwalk animation, and applies a 1-second use cooldown.
+- **Smart AI Enhancements**: 
+  - *Edge Detection*: The CPU opponent now tracks platform boundaries to avoid mindlessly walking off ledges.
+  - *Vertical Awareness*: The AI utilizes the new double jump to chase fighters on higher platforms.
+  - CPU now heavily utilizes the new Dodge/Moonwalk (50% chance when retreating) and Heavy Attack abilities.
+- **Modular Scenes & Platform Textures**: Refactored arenas into `src/engine/scenes/` (`dojo.js`, `platformer.js`). Engine now supports complex internal collision on floating platforms including platform-based interactions (flags/zones prep).
 
 ### Fixed
-- Restore strong attack sound and correct strong attack timing/behavior (`src/engine/classes/Fighter.js`).
-- Fix mobile main menu touch handling after match end (`src/components/GameInterface.jsx`).
-- Various engine, input and networking improvements to stabilize gameplay and animations.
+- Fixed strong attack audio trigger; attack sound ("swosh") now plays correctly for both light and heavy attacks within the `switchSprite` animation protector.
+- Fixed mobile UI bug where "Main Menu" button touch handlers remained disabled at the end of a match (`src/components/GameInterface.jsx`).
+- Fixed character clipping through suspended platforms by natively integrating environment bounds into the Fighter's `update` logic (`levelConfig.platforms`).
 
 ### Changed
-- Controls: document and standardize control mappings across keyboard, gamepad and mobile overlays (strong attack: `E` / gamepad B, dodge: `F` / gamepad Y/bumper). See README for details.
+- Unified controls structure. Attack arrays now cleanly protect their animation loop (`protectedAnimations` matrix in Fighter.js).
+- Adjusted mobile overlay rendering spacing for additional action buttons.
 
 
 ## [2.6.1] - 2026-03-17
