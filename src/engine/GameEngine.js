@@ -22,7 +22,7 @@ let enemy = null;
 let background;
 let shop;
 let currentLevelConfig;
-let camera = { x: 0, y: 0 };
+let camera = { x: 0, y: 0, zoom: 1.0 };
 
 let isRoundOver = false;
 let globalTimer = 60;
@@ -112,7 +112,7 @@ export function initGameEngine(canvasElement, useGameStore) {
             if (globalTimerId) clearTimeout(globalTimerId);
             if (networkSyncId) clearInterval(networkSyncId);
             currentLevelConfig = null;
-            camera = { x: 0, y: 0 };
+            camera = { x: 0, y: 0, zoom: 1.0 };
             background.image.src = '/assets/images/background.png'.replace(/^\.\/img\//, '../assets/images/');
             if (shop) {
                 shop.position.x = shop.basePosition.x;
@@ -197,11 +197,15 @@ function startGame(state) {
                 if (isHost && enemy) enemy.jump();
                 if (!isHost && player) player.jump();
             } else if (data.type === 'attack') {
-                if (isHost && enemy) { enemy.attack(); }
-                if (!isHost && player) { player.attack(); }
+                const target = (isHost ? enemy : player);
+                if (target) {
+                    target.attack();
+                    // Ważne: po ręcznym wyzwoleniu ataku, ignorujemy synchronizację klatek 
+                    // przez krótki czas, co już zapewnia poprawiony NetworkFighter.
+                }
             } else if (data.type === 'heavyAttack') {
-                if (isHost && enemy) { enemy.heavyAttack && enemy.heavyAttack(); }
-                if (!isHost && player) { player.heavyAttack && player.heavyAttack(); }
+                const target = (isHost ? enemy : player);
+                if (target && target.heavyAttack) target.heavyAttack();
             } else if (data.type === 'dodge') {
                 if (isHost && enemy) { enemy.dodge && enemy.dodge(); }
                 if (!isHost && player) { player.dodge && player.dodge(); }
@@ -265,39 +269,51 @@ function animate() {
 
         let targetCamX = 0;
         let targetCamY = 0;
+        let targetZoom = 1.0;
 
-        if (isMultiplayer) {
-            // Camera follows local fighter
+        if (isMultiplayer || (state && state.gameMode === 'ARCADE')) {
+            // Singleplayer vs Bot lub Online Multiplayer - śledzenie wyłącznie lokalnego gracza
             targetCamX = (localFighter.position.x + localFighter.width/2) - canvas.width / 2;
             const targetY = (localFighter.position.y + localFighter.height/2);
             targetCamY = targetY - canvas.height / 2;
         } else {
-            // Camera tracks both X, but anchors Y near the ground (lowest player's head/waist)
+            // Lokalny multiplayer: Środek obu graczy
             const midX = (player.position.x + player.width/2 + enemy.position.x + enemy.width/2) / 2;
             const maxHeelsY = Math.max(player.position.y + player.height, enemy.position.y + enemy.height);
             
-            targetCamX = midX - canvas.width / 2;
-            // Adjust camera so the lowest feet are roughly near the bottom 25% of the screen
-            targetCamY = maxHeelsY - (canvas.height * 0.75);
+            // Dystans do wyliczenia skalowania (zoom out) jeżeli gracze są daleko oddaleni
+            const dx = Math.abs(player.position.x - enemy.position.x);
+            const zoomBase = canvas.width * 0.5;
+            
+            if (dx > zoomBase) {
+                targetZoom = Math.max(0.6, zoomBase / dx);
+            }
+            
+            targetCamX = midX - (canvas.width / 2) / targetZoom;
+            targetCamY = maxHeelsY - (canvas.height * 0.75) / targetZoom;
         }
         
         // Simple lerp for smooth camera
         camera.x += (targetCamX - camera.x) * 0.1;
         camera.y += (targetCamY - camera.y) * 0.1;
+        camera.zoom += (targetZoom - camera.zoom) * 0.05;
+        
+        const z = camera.zoom;
         
         // Clamp to level boundaries (optional but good practice)
         if (camera.x < 0) camera.x = 0;
         if (camera.y < 0) camera.y = 0;
-        if (currentLevelConfig.worldWidth && camera.x + canvas.width > currentLevelConfig.worldWidth) 
-            camera.x = currentLevelConfig.worldWidth - canvas.width;
-        if (currentLevelConfig.worldHeight && camera.y + canvas.height > currentLevelConfig.worldHeight) 
-            camera.y = currentLevelConfig.worldHeight - canvas.height;
+        if (currentLevelConfig.worldWidth && camera.x + (canvas.width / z) > currentLevelConfig.worldWidth) 
+            camera.x = currentLevelConfig.worldWidth - (canvas.width / z);
+        if (currentLevelConfig.worldHeight && camera.y + (canvas.height / z) > currentLevelConfig.worldHeight) 
+            camera.y = currentLevelConfig.worldHeight - (canvas.height / z);
     }
 
     c.fillStyle = 'black';
     c.fillRect(0, 0, canvas.width, canvas.height);
 
     c.save();
+    c.scale(camera.zoom, camera.zoom);
     c.translate(-Math.floor(camera.x), -Math.floor(camera.y));
 
     if (background && background.image && background.image.complete && background.image.naturalWidth) {
@@ -328,11 +344,27 @@ function animate() {
         shop.update(c);
     }
     
-    // Draw platforms directly or rely on background. Just a quick debug draw for platforms:
+    // Rysowanie platform (wraz z obsługą wycinków tekstur z tła)
     if (currentLevelConfig && currentLevelConfig.platforms) {
-        c.fillStyle = 'rgba(100, 100, 100, 0.8)';
         for (let p of currentLevelConfig.platforms) {
-            c.fillRect(p.x, p.y, p.width, p.height);
+            if (p.texture && background && background.image && background.image.complete) {
+                const img = background.image;
+                
+                // Konwersja skali świata by zaaplikować odpowiedni wycinek tła
+                const worldHeight = currentLevelConfig.worldHeight || canvas.height;
+                const scale = worldHeight / img.height;
+                
+                const srcX = p.texX !== undefined ? p.texX / scale : 0;
+                const srcY = p.texY !== undefined ? p.texY / scale : (img.height - (p.height / scale));
+                
+                const srcW = p.width / scale;
+                const srcH = p.height / scale;
+
+                c.drawImage(img, srcX, srcY, srcW, srcH, p.x, p.y, p.width, p.height);
+            } else {
+                c.fillStyle = 'rgba(100, 100, 100, 0.8)';
+                c.fillRect(p.x, p.y, p.width, p.height);
+            }
         }
     }
     
@@ -403,7 +435,7 @@ function animate() {
             if (isP2Local) {
                 if (state.gameMode === 'ARCADE' && typeof enemy.updateAI === 'function') {
                     // AI controls itself
-                    enemy.updateAI([player]);
+                    enemy.updateAI([player], currentLevelConfig.platforms);
                 } else {
                     const leftKey = isMultiplayer ? 'a' : 'ArrowLeft';
                     const rightKey = isMultiplayer ? 'd' : 'ArrowRight';
@@ -483,6 +515,7 @@ export function destroyGameEngine() {
 }
 
 function handleKeyDown(event) {
+    if (event.repeat) return; // Zapobiega powielaniu komend przez przytrzymany klawisz (tzw. spam systemowy)
     if (!player || !enemy || isRoundOver) return;
     const state = store.getState();
     const isMultiplayer = state.isMultiplayer;

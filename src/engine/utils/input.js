@@ -47,6 +47,16 @@ export function handleGamepadInput(player, enemy, keys, { jump, restartGame, all
                 fighter.canAttack = true; // Zastępuje keyup
             }
 
+            // Heavy Attack (B / Circle)
+            if (gp.buttons[1] && gp.buttons[1].pressed) {
+                fighter.heavyAttack && fighter.heavyAttack();
+            }
+
+            // Dodge (Y / Triangle or Bumper)
+            if ((gp.buttons[3] && gp.buttons[3].pressed) || (gp.buttons[4] && gp.buttons[4].pressed) || (gp.buttons[5] && gp.buttons[5].pressed)) {
+                fighter.dodge && fighter.dodge();
+            }
+
         } else {
             if (fighter.gpMoved) {
                 keys[keyLeft].pressed = false;

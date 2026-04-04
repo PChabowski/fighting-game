@@ -13,6 +13,6 @@ export const dojo = {
     shopPosition: { x: 650, y: 480 },
     shopPosition: { x: 250, y: 480 },
     platforms: [
-        { x: -500, y: 480, width: 2024, height: 100 } // Floor
+        { x: -500, y: 480, width: 2024, height: 96, texture: 'game-floor' } // Floor texture assigned
     ]
 };

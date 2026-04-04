@@ -269,7 +269,8 @@ canvas {
 
 /* kontener dla przycisków skok + atak */
 .action-buttons {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(2, 60px);
   gap: 10px;
   pointer-events: auto;
   /* default layout puts buttons horizontally on larger screens */
@@ -357,6 +358,26 @@ canvas {
 .attack-btn:active,
 .attack-btn.active {
   background-color: rgba(50, 130, 200, 1);
+  color: #fff;
+}
+
+.heavy-btn {
+  background-color: rgba(255, 0, 0, 0.4);
+  color: #fff;
+}
+.heavy-btn:active,
+.heavy-btn.active {
+  background-color: rgba(255, 0, 0, 0.7);
+  color: #fff;
+}
+
+.dodge-btn {
+  background-color: rgba(128, 128, 128, 0.5);
+  color: #fff;
+}
+.dodge-btn:active,
+.dodge-btn.active {
+  background-color: rgba(128, 128, 128, 0.8);
   color: #fff;
 }
 
