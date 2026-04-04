@@ -386,6 +386,13 @@ export class Fighter extends Sprite {
     this.frameMax = target.frameMax;
     this.framesCurrent = 0; // Reset klatki tylko przy faktycznej zmianie obrazka
 
+    // Przywrócenie dźwięku ataku i silnego ataku
+    if (typeof window !== 'undefined' && window.audioManager) {
+      if (sprite === 'attack' || sprite === 'heavyAttack') {
+        window.audioManager.playSoundEffect('attack');
+      }
+    }
+
     return true;
   }
 }
