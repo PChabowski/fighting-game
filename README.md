@@ -4,7 +4,7 @@ A modular 2D fighting game built with React, Vite, ES6 modules, Canvas 2D, and a
 
 ## Version
 
-- Current release: `v2.6.1`
+- Current release: `v2.7.0`
 
 ## 🔗 Play Now
 
@@ -43,10 +43,30 @@ The project has been refactored into a React/Vite modular architecture utilizing
 - Keyboard, gamepad, and mobile touch controls.
 - Responsive canvas with fixed internal resolution (`1024x576`) and CSS scaling.
 
-## 🛠️ Build and RUN
+## Controls
 
-You can run this project locally:
+Controls are consistent across modes. The engine maps keyboard and mobile inputs to the local fighter.
 
+- Keyboard:
+	- Movement: `A` / `D` (left/right)
+        - Jump / Double Jump: `W` (tap twice to double jump)
+        - Light attack: `Space`
+        - Heavy (strong) attack: `E`
+        - Dodge (I-Frames/Moonwalk): `F`
+
+- Gamepad (recommended mapping):
+        - Jump / Double Jump: `A` / D-Pad Up (button 0)
+        - Light attack: `X` (button 2)
+        - Heavy (strong) attack: `B` / `Circle` (button 1)
+        - Dodge: `Y` / `Triangle` or Bumpers (button 3,4,5)
+
+- Mobile/touch overlay:
+        - On mobile the on-screen buttons map to the same keys (`A/D` for movement, `J` for jump/double-jump, `A` light attack, `S` heavy attack, `D` dodge).
+
+Gameplay notes:
+- **Strong Attack**: A slower, punishing attack yielding higher frames of commitment. Use the heavy attack button when an opening presents itself.
+- **Dodge (Moonwalk)**: Executes a quick, backwards moonwalk sequence rendering you momentarily invincible (I-Frames). Doing so prevents taking damage, but puts the dodge skill on a 1-second cooldown.
+- **Double Jump**: You can now jump a second time while in mid-air to reach higher platforms in expanded stage scenes or evade grounded tracking AI.
 ```bash
 npm install
 npm run dev

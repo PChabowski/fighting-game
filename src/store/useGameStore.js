@@ -29,6 +29,7 @@ const useGameStore = create((set) => ({
   setMultiplayer: (val) => set({ isMultiplayer: val }),
   setGameMode: (mode) => set({ gameMode: mode }),
   setConnectionData: (peerId, conn) => set({ peerId, connection: conn }),
+  setSelectedLevel: (levelId) => set({ selectedLevel: levelId }),
   
   // Akcje do wywoływania z poziomu silnika Canvas/JavaScript
   updateHealth: (player, hp) => set((state) => ({

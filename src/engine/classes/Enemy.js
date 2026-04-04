@@ -45,13 +45,7 @@ export class Enemy extends Fighter {
         return closestPlayer;
     }
 
-    jump() {
-        if (this.velocity.y === 0) {
-            this.velocity.y = -15;
-        }
-    }
-
-    updateAI(targets) {
+    updateAI(targets, platforms = []) {
         if (!this.aiActive || this.dead) {
             this.stopHorizontal();
             return;
@@ -83,6 +77,32 @@ export class Enemy extends Fighter {
 
         // Execute action every frame to keep moving (since GameEngine calls stopHorizontal each frame)
         this.executeAction();
+
+        // Edge detection - avoid falling off platforms
+        if (this.velocity.x !== 0 && platforms.length > 0 && this.velocity.y === 0) {
+            // Check ahead 15 pixels based on direction
+            const lookAheadX = this.velocity.x > 0 ? this.position.x + this.width + 15 : this.position.x - 15;
+            const myBottom = this.position.y + this.height;
+            let safe = false;
+
+            for (let p of platforms) {
+                if (lookAheadX >= p.x && lookAheadX <= p.x + p.width) {
+                    // Sprawdzamy czy platforma znajduje się tuż pod nami (tolerancja do stopnia urwiska)
+                    if (p.y >= myBottom - 5 && p.y <= myBottom + 5) {
+                        safe = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!safe) {
+                this.stopHorizontal();
+                this.switchSprite('idle');
+                if (this.fsmState === AI_STATE.APPROACH || this.fsmState === AI_STATE.RETREAT) {
+                    this.fsmState = AI_STATE.IDLE;
+                }
+            }
+        }
     }
 
     evaluateState(targets) {
@@ -104,7 +124,12 @@ export class Enemy extends Fighter {
         // Szansa na unik (skok) kiedy przeciwnik atakuje z bliska
         if (isTargetAttacking && absDistanceX < 120 && Math.random() < 0.4) {
             this.fsmState = AI_STATE.RETREAT;
-            this.jump();
+            // Oprócz skoku, AI może spróbować użyć dedykowanego dodge() z pewną szansą
+            if (Math.random() < 0.5) {
+                this.dodge();
+            } else {
+                this.jump();
+            }
             return;
         }
 
@@ -116,17 +141,25 @@ export class Enemy extends Fighter {
             this.fsmState = AI_STATE.RETREAT;
             if (Math.random() < 0.3) this.jump();
         } else if (absDistanceX <= this.attackBox.width + 20) {
-            // Close enough to attack
-            // 70% chance to attack, 30% chance to idle (don't constantly spam attacks)
-            if (Math.random() < 0.7) {
-                this.fsmState = AI_STATE.ATTACK;
+            // Check vertical limits (świadomość pięter)
+            if (Math.abs(distanceY) > 80) {
+                this.fsmState = AI_STATE.APPROACH; 
+                this.jump();
+                if (this.canDoubleJump && Math.random() < 0.7) {
+                    // Try to double jump up
+                    setTimeout(() => this.jump(), 200);
+                }
             } else {
-                this.fsmState = AI_STATE.IDLE;
+                // Close enough to attack
+                if (Math.random() < 0.7) {
+                    this.fsmState = AI_STATE.ATTACK;
+                } else {
+                    this.fsmState = AI_STATE.IDLE;
+                }
             }
         } else {
-            // Approach target
+            // Approach target - unikaj zrzucania w śmierć przy wchodzeniu w zasięg
             this.fsmState = AI_STATE.APPROACH;
-            // Niewielka szansa na zaskakujący "jump-in" zbliżając się z daleka
             if (absDistanceX > 150 && Math.random() < 0.15) {
                 this.jump();
             }
@@ -161,7 +194,11 @@ export class Enemy extends Fighter {
             case AI_STATE.ATTACK:
                 this.stopHorizontal();
                 this.switchSprite('idle'); // Wyciąga z pętli po takeHit, jeśli cooldown blokuje nowy atak
-                this.attack();
+                if (Math.random() < 0.2) {
+                    this.heavyAttack(); // 20% szans, że zaatakuje mocno
+                } else {
+                    this.attack();
+                }
                 break;
 
             case AI_STATE.RETREAT:

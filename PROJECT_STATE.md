@@ -49,6 +49,10 @@ This document describes the current architecture and implementation of the React
 │   │   │   ├── Fighter.js
 │   │   │   ├── NetworkFighter.js
 │   │   │   └── Sprite.js
+│   │   ├── scenes/             # Game scenes & environment configurations
+│   │   │   ├── dojo.js
+│   │   │   ├── index.js
+│   │   │   └── platformer.js
 │   │   └── utils/              # Helper pure functions
 │   │       ├── collision.js
 │   │       ├── constants.js
@@ -81,8 +85,8 @@ UI is built strictly in React.
 - `GameCanvas.jsx`: A crucial bridge component with a `useEffect` that initializes the `GameEngine` and watches for cleanup.
 
 #### Engine & Classes (`src/engine/`)
-The `GameEngine.js` initializes `Sprites` and `Fighters`, handles collisions, input, networking, and invokes Zustand actions (e.g. `useGameStore.getState().setPlayerHealth()`) to sync data back to the React UI hooks.
-- **`Sprite` & `Fighter`**: Core logic is very similar to the old Vanilla version, preserving manual `canvas` drawing and animation states.
+The `GameEngine.js` initializes `Sprites` and `Fighters`, handles collisions, input, networking, and invokes Zustand actions (e.g. `useGameStore.getState().setPlayerHealth()`) to sync data back to the React UI hooks. Furthermore, it now manages Scenes (`src/engine/scenes/`) to dynamically build fight arenas with textured platforms, flag pickup mechanics, and level-specific bounds.
+- **`Sprite` & `Fighter`**: Core logic is very similar to the old Vanilla version, preserving manual `canvas` drawing and animation states. Fighters now support a complex `dodge` mechanic (moonwalk/back-step animations and invulnerable frames) as well as heavy/strong attacks (`heavyAttack`).
 - **`Enemy`**: Extends `Fighter` with a Finite State Machine (FSM) AI logic to battle the player in Arcade mode. Features target-finding capabilities, cooldown management, overlap unblocking, and jumping/dodging techniques.
 - **`NetworkFighter`**: Extends logic to buffer incoming remote state from PeerJS for smooth multiplayer handling.
 

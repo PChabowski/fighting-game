@@ -22,6 +22,8 @@ export default function MobileControls() {
   const KEY_RIGHT = 'd';
   const KEY_JUMP = 'w';
   const KEY_ATTACK = ' ';
+  const KEY_HEAVY_ATTACK = 'e';
+  const KEY_DODGE = 'f';
 
   const handleTouchStart = (key) => (e) => {
     e.preventDefault();
@@ -55,6 +57,20 @@ export default function MobileControls() {
       </div>
 
       <div className="action-buttons">
+        <button 
+          className="mobile-btn action-btn heavy-btn"
+          onTouchStart={handleTouchStart(KEY_HEAVY_ATTACK)}
+          onTouchEnd={handleTouchEnd(KEY_HEAVY_ATTACK)}
+        >
+          S
+        </button>
+        <button 
+          className="mobile-btn action-btn dodge-btn"
+          onTouchStart={handleTouchStart(KEY_DODGE)}
+          onTouchEnd={handleTouchEnd(KEY_DODGE)}
+        >
+          D
+        </button>
         <button 
           className="mobile-btn action-btn jump-btn"
           onTouchStart={handleTouchStart(KEY_JUMP)}

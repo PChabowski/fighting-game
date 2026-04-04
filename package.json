@@ -1,6 +1,6 @@
 {
   "name": "blood-honor",
-  "version": "2.6.1",
+  "version": "2.7.0",
   "description": "A modular 2D fighting game built with pure JavaScript (ES6 modules), Canvas 2D, and an online multiplayer mode powered by PeerJS.",
   "main": "index.js",
   "scripts": {

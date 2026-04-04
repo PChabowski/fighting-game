@@ -3,6 +3,7 @@ import MobileControls from './MobileControls';
 import Timer from './ui/Timer';
 import HealthBar from './ui/HealthBar';
 import WinModal from './ui/WinModal';
+import useGameStore from '../store/useGameStore';
 
 export default function GameInterface() {
   return (
@@ -20,7 +21,8 @@ export default function GameInterface() {
 
       {/* Winner Message */}
       <WinModal />
-      <MobileControls />
+      {/* MobileControls render only if WinModal is not visible (winner === null) */}
+      {useGameStore.getState().winner === null && <MobileControls />}
     </>
   );
 }

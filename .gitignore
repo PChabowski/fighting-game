@@ -12,6 +12,7 @@ node_modules/
 .vite/
 
 # Compiled outputs
+docs/
 dist/
 dist-ssr/
 *.local
