@@ -51,6 +51,7 @@ export class Fighter extends Sprite {
     this.framesCurrent = 0;
     this.framesElapsed = 0;
     this.framesHold = 7;
+    this.baseFramesHold = 7; // Bazowa liczba klatek na animację ataku
     this.sprites = sprites || {};
     this.dead = false;
     this.canAttack = true; // Flaga blokująca spamowanie atakiem
@@ -262,6 +263,7 @@ export class Fighter extends Sprite {
     if (typeof data.dead === "boolean") this.dead = data.dead;
   }
 
+
   attack() {
     if (!this.canAttack || this.dead || this.isDodging) return;
 
@@ -271,6 +273,7 @@ export class Fighter extends Sprite {
     )
       return;
 
+    this.framesHold = this.baseFramesHold;
     this.switchSprite("attack");
     this.isAttacking = true;
     this.isHeavyAttack = false;
@@ -281,23 +284,36 @@ export class Fighter extends Sprite {
     if (!this.canAttack || this.dead || this.isDodging) return;
 
     if (
-      this.image === this.sprites.heavyAttack?.image &&
-      this.framesCurrent < this.sprites.heavyAttack?.frameMax - 1
+      (this.sprites.heavyAttack && this.image === this.sprites.heavyAttack.image && this.framesCurrent < this.sprites.heavyAttack.frameMax - 1) ||
+      (!this.sprites.heavyAttack && this.image === this.sprites.attack.image && this.framesCurrent < this.sprites.attack.frameMax - 1)
     )
       return;
 
-    // Jeśli nie ma spritea heavyAttack, użyj zwykłego ataku jako placeholder,
-    // ale w zwolnionym tempie (framesHold x 1.7)
+    this.framesHold = Math.floor(this.baseFramesHold * 1.7);
     if (this.sprites.heavyAttack) {
       this.switchSprite("heavyAttack");
     } else {
       this.switchSprite("attack");
-      this.framesHold = Math.floor(7 * 1.7); // standard is 7
     }
 
     this.isAttacking = true;
     this.isHeavyAttack = true;
     this.canAttack = false;
+  }
+  // Nadpisanie animateFrames, by przywracać framesHold po zakończeniu animacji ataku
+  animateFrames() {
+    this.framesElapsed++;
+    if (this.framesElapsed % this.framesHold === 0) {
+      if (this.framesCurrent < this.frameMax - 1) {
+        this.framesCurrent++;
+      } else {
+        // Po zakończeniu animacji ataku lub silnego ataku przywróć framesHold
+        if (this.isAttacking || this.isHeavyAttack) {
+          this.framesHold = this.baseFramesHold;
+        }
+        this.framesCurrent = 0;
+      }
+    }
   }
 
   dodge() {
