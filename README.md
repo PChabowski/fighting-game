@@ -43,6 +43,31 @@ The project has been refactored into a React/Vite modular architecture utilizing
 - Keyboard, gamepad, and mobile touch controls.
 - Responsive canvas with fixed internal resolution (`1024x576`) and CSS scaling.
 
+## Controls
+
+Controls are consistent across modes. The engine maps keyboard and mobile inputs to the local fighter.
+
+- Keyboard:
+	- Movement: `A` / `D` (left/right)
+	- Jump: `W`
+	- Light attack: `Space`
+	- Heavy (strong) attack: `E`
+	- Dodge: `F`
+
+- Gamepad (recommended mapping):
+	- Jump: `A` / D-Pad Up (button 0)
+	- Light attack: `X` (button 2)
+	- Heavy (strong) attack: `B` / `Circle` (button 1)
+	- Dodge: `Y` / `Triangle` or Bumpers (button 3,4,5)
+
+- Mobile/touch overlay:
+	- On mobile the on-screen buttons map to the same keys (`A/D` for movement, `J` for jump (maps to `W`), `A` attack (Space), `S` heavy attack (E), `D` dodge (F)).
+
+Gameplay notes:
+- Strong attack is a slower, higher-damage attack — use the heavy attack button (`E` / gamepad B) when you have time to commit the move.
+- Dodge performs a quick back-step; it now plays the moonwalk/back-step animation and avoids incoming attacks when timed correctly.
+
+
 ## 🛠️ Build and RUN
 
 You can run this project locally:

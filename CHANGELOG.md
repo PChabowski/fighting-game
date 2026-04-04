@@ -5,8 +5,6 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
-## [2.6.0] - 2026-03-16
-
 ## [2.7.0] - 2026-04-04
 
 ### Added
@@ -18,6 +16,9 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - Restore strong attack sound and correct strong attack timing/behavior (`src/engine/classes/Fighter.js`).
 - Fix mobile main menu touch handling after match end (`src/components/GameInterface.jsx`).
 - Various engine, input and networking improvements to stabilize gameplay and animations.
+
+### Changed
+- Controls: document and standardize control mappings across keyboard, gamepad and mobile overlays (strong attack: `E` / gamepad B, dodge: `F` / gamepad Y/bumper). See README for details.
 
 
 ## [2.6.1] - 2026-03-17
