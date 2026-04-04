@@ -7,6 +7,19 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [2.6.0] - 2026-03-16
 
+## [2.7.0] - 2026-04-04
+
+### Added
+- Platform texture support and updated platform scenes (`src/engine/scenes/*`) to accept textures and interactions.
+- Dodge/back-step animation (moonwalk) and improved dodge behavior for fighters.
+- Preparatory groundwork for platform interactions (control takeover, flag pickup mechanics).
+
+### Fixed
+- Restore strong attack sound and correct strong attack timing/behavior (`src/engine/classes/Fighter.js`).
+- Fix mobile main menu touch handling after match end (`src/components/GameInterface.jsx`).
+- Various engine, input and networking improvements to stabilize gameplay and animations.
+
+
 ## [2.6.1] - 2026-03-17
 
 ### Fixed
