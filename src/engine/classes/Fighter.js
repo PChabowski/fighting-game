@@ -1,4 +1,5 @@
 import { Sprite } from "./Sprite.js";
+import { globalAudioManager } from "./AudioManager.js";
 
 export class Fighter extends Sprite {
   constructor({
@@ -130,23 +131,31 @@ export class Fighter extends Sprite {
 
     this.attackBox.position.y = this.position.y + this.attackBox.offset.y;
 
-    this.position.x += this.velocity.x;
-    this.position.y += this.velocity.y;
+    // Obliczanie Delta Time do grawitacji
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    const dt = this.lastTime ? Math.min((now - this.lastTime) / (1000 / 60), 3) : 1;
+    this.lastTime = now;
 
-    // Platform / Gravity collisions
+    this.position.x += this.velocity.x * dt;
+    // Odejmujemy this.velocity.y ponieważ jeszcze nie dodaliśmy jej do this.position.y!
+    const nextY = this.position.y + this.velocity.y * dt;
+
+    // Platform / Gravity collisions (Sprawdzamy rzutowanie hitboxa ZANIM przesunęliśmy Y)
     let standing = false;
     let groundY = null;
 
     if (levelConfig.platforms) {
       // Find platform immediately below
       for (let platform of levelConfig.platforms) {
+        // Szeroki hitbox na X zamist samego środka
         const isWithinX =
-          this.position.x + this.width / 2 >= platform.x &&
-          this.position.x + this.width / 2 <= platform.x + platform.width;
+          this.position.x + this.width > platform.x &&
+          this.position.x < platform.x + platform.width;
 
-        const fighterBottom = this.position.y + this.height;
-        const wasAbove = fighterBottom - this.velocity.y <= platform.y;
-        const goesBelow = fighterBottom >= platform.y;
+        const currentFighterBottom = this.position.y + this.height;
+        const nextFighterBottom = nextY + this.height;
+        const wasAbove = currentFighterBottom <= platform.y + 0.1; // Dodajemy 0.1 margin na float err
+        const goesBelow = nextFighterBottom >= platform.y;
 
         if (this.velocity.y >= 0 && isWithinX && wasAbove && goesBelow) {
           standing = true;
@@ -155,6 +164,9 @@ export class Fighter extends Sprite {
         }
       }
     }
+
+    // Teraz aplikujemy pozycję Y
+    this.position.y = nextY;
 
     if (this.dodgeCooldown > 0) {
       this.dodgeCooldown--;
@@ -179,7 +191,7 @@ export class Fighter extends Sprite {
       this.position.y = groundY - this.height;
       this.canDoubleJump = true;
     } else {
-      this.velocity.y += gravity;
+      this.velocity.y += gravity * dt;
     }
 
     // Reset flags at the end of their animations
@@ -385,11 +397,12 @@ export class Fighter extends Sprite {
     this.image = target.image;
     this.frameMax = target.frameMax;
     this.framesCurrent = 0; // Reset klatki tylko przy faktycznej zmianie obrazka
+    this.framesElapsed = 0; // Synchronizacja odtwarzania animacji
 
     // Przywrócenie dźwięku ataku i silnego ataku
-    if (typeof window !== 'undefined' && window.audioManager) {
-      if (sprite === 'attack' || sprite === 'heavyAttack') {
-        window.audioManager.playSoundEffect('attack');
+    if (sprite === 'attack' || sprite === 'heavyAttack') {
+      if (globalAudioManager) {
+        globalAudioManager.playSoundEffect('attack');
       }
     }
 

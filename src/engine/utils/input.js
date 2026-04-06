@@ -35,25 +35,30 @@ export function handleGamepadInput(player, enemy, keys, { jump, restartGame, all
                 fighter.gpMoved = true;
             }
 
-            // Jump
-            if ((gp.buttons[0] && gp.buttons[0].pressed) || (gp.buttons[12] && gp.buttons[12].pressed)) {
+            // Jump (has edge detection/debounce per frame)
+            const jumpPressed = (gp.buttons[0] && gp.buttons[0].pressed) || (gp.buttons[12] && gp.buttons[12].pressed);
+            if (jumpPressed && !fighter.gpLastJump) {
                 jump(fighter);
             }
+            fighter.gpLastJump = jumpPressed;
 
-            // Attack
-            if ((gp.buttons[2] && gp.buttons[2].pressed) || (gp.buttons[1] && gp.buttons[1].pressed)) {
+            // Attack and Heavy Attack grouped to avoid overwriting canAttack incorrectly
+            const attackPressed = gp.buttons[2] && gp.buttons[2].pressed;
+            const heavyPressed = gp.buttons[3] && gp.buttons[3].pressed;
+
+            if (attackPressed && !fighter.gpLastAttack) {
                 fighter.attack();
-            } else {
+            } else if (heavyPressed && !fighter.gpLastHeavy) {
+                fighter.heavyAttack && fighter.heavyAttack();
+            } else if (!attackPressed && !heavyPressed && (fighter.gpLastAttack || fighter.gpLastHeavy)) {
                 fighter.canAttack = true; // Zastępuje keyup
             }
+            
+            fighter.gpLastAttack = attackPressed;
+            fighter.gpLastHeavy = heavyPressed;
 
-            // Heavy Attack (B / Circle)
-            if (gp.buttons[1] && gp.buttons[1].pressed) {
-                fighter.heavyAttack && fighter.heavyAttack();
-            }
-
-            // Dodge (Y / Triangle or Bumper)
-            if ((gp.buttons[3] && gp.buttons[3].pressed) || (gp.buttons[4] && gp.buttons[4].pressed) || (gp.buttons[5] && gp.buttons[5].pressed)) {
+            // Dodge (B / Circle - button 1, or Bumpers)
+            if ((gp.buttons[1] && gp.buttons[1].pressed) || (gp.buttons[4] && gp.buttons[4].pressed) || (gp.buttons[5] && gp.buttons[5].pressed)) {
                 fighter.dodge && fighter.dodge();
             }
 

@@ -33,8 +33,22 @@ export class NetworkFighter extends Fighter {
       // Skrypt lokalny taki jak w Fighter.js
       super.update(c, levelConfig, gravity);
     } else {
+      if (this.dodgeCooldown > 0) {
+        this.dodgeCooldown--;
+      }
+      // Przywrócenie półprzezroczystości gdy unik włączony
+      if (this.dodgeTimer > 0) {
+        c.globalAlpha = 0.5;
+        this.dodgeTimer--;
+        if (this.dodgeTimer === 0) {
+          this.isDodging = false;
+        }
+      }
+
       // Animacja i rysunek klatek
       this.draw(c);
+      c.globalAlpha = 1.0; // Reset na wypadek bycia półprzezroczystym
+
       if (!this.dead) this.animateFrames();
 
       // Orientacja collision-boxow
@@ -151,8 +165,12 @@ export class NetworkFighter extends Fighter {
       }
     }
 
-    // 3. Statystyki
+    // 3. Statystyki i Stany
     if (typeof data.health === "number") this.health = data.health;
     if (typeof data.dead === "boolean") this.dead = data.dead;
+    if (typeof data.canAttack === "boolean") this.canAttack = data.canAttack;
+    if (typeof data.isAttacking === "boolean") this.isAttacking = data.isAttacking;
+    if (typeof data.isHeavyAttack === "boolean") this.isHeavyAttack = data.isHeavyAttack;
+    if (typeof data.framesHold === "number") this.framesHold = data.framesHold;
   }
 }

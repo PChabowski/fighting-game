@@ -281,11 +281,11 @@ function animate() {
             const midX = (player.position.x + player.width/2 + enemy.position.x + enemy.width/2) / 2;
             const maxHeelsY = Math.max(player.position.y + player.height, enemy.position.y + enemy.height);
             
-            // Dystans do wyliczenia skalowania (zoom out) jeżeli gracze są daleko oddaleni
+            // Dystans do wyliczenia skalowania (zoom out) jeżeli gracze są daleko oddaleni i jeżeli mapa jest wystarczająco duża
             const dx = Math.abs(player.position.x - enemy.position.x);
             const zoomBase = canvas.width * 0.5;
             
-            if (dx > zoomBase) {
+            if (dx > zoomBase && (!currentLevelConfig.worldWidth || currentLevelConfig.worldWidth >= 1200)) {
                 targetZoom = Math.max(0.6, zoomBase / dx);
             }
             
