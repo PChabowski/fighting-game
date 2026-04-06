@@ -301,7 +301,7 @@ export class Fighter extends Sprite {
     )
       return;
 
-    this.framesHold = Math.floor(this.baseFramesHold * 1.7);
+    this.framesHold = Math.floor(this.baseFramesHold * 2.2);
     if (this.sprites.heavyAttack) {
       this.switchSprite("heavyAttack");
     } else {
