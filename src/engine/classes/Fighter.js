@@ -55,6 +55,7 @@ export class Fighter extends Sprite {
     this.baseFramesHold = 7; // Bazowa liczba klatek na animację ataku
     this.sprites = sprites || {};
     this.dead = false;
+    this._pendingDeath = false;
     this.canAttack = true; // Flaga blokująca spamowanie atakiem
 
     for (const sprite in this.sprites) {
@@ -202,6 +203,22 @@ export class Fighter extends Sprite {
     ) {
       this.isDodging = false;
     }
+
+    // Jeśli wcześniej wskazaliśmy na oczekującą śmierć (np. trafienie nastąpiło
+    // w trakcie chronionej animacji), spróbujmy ją zastosować, gdy animacja się skończy.
+    if (this._pendingDeath) {
+      const protectedAnimations = ["attack", "heavyAttack", "takeHit", "dodge"];
+      const currentKey = Object.keys(this.sprites).find(
+        (k) => this.sprites[k].image === this.image,
+      );
+      const isCurrentlyProtected =
+        protectedAnimations.includes(currentKey) && this.framesCurrent < this.frameMax - 1;
+
+      if (!isCurrentlyProtected) {
+        this.switchSprite("death");
+        this._pendingDeath = false;
+      }
+    }
   }
 
   // Input-facing methods: allow external input handlers to control the fighter
@@ -319,11 +336,18 @@ export class Fighter extends Sprite {
       if (this.framesCurrent < this.frameMax - 1) {
         this.framesCurrent++;
       } else {
-        // Po zakończeniu animacji ataku lub silnego ataku przywróć framesHold
-        if (this.isAttacking || this.isHeavyAttack) {
-          this.framesHold = this.baseFramesHold;
+        // Jeśli aktualna animacja to śmierć, oznaczamy postać jako martwą
+        // i zatrzymujemy się na ostatniej klatce (nie resetujemy do 0)
+        if (this.sprites.death && this.image === this.sprites.death.image) {
+          this.dead = true;
+          // pozostawiamy framesCurrent na frameMax - 1
+        } else {
+          // Po zakończeniu animacji ataku lub silnego ataku przywróć framesHold
+          if (this.isAttacking || this.isHeavyAttack) {
+            this.framesHold = this.baseFramesHold;
+          }
+          this.framesCurrent = 0;
         }
-        this.framesCurrent = 0;
       }
     }
   }
@@ -357,8 +381,13 @@ export class Fighter extends Sprite {
 
     this.health -= damage;
     this.isAttacking = false; // Przerywa trwający atak, by nie zadawać fałszywych ciosów po oberwaniu
+
     if (this.health <= 0) {
-      this.switchSprite("death");
+      // Próba natychmiastowego przełączenia na death; jeśli to się nie uda
+      // (np. trwa chroniona animacja), oznaczamy potrzebę uruchomienia
+      // animacji po jej zakończeniu.
+      const switched = this.switchSprite("death");
+      if (!switched) this._pendingDeath = true;
     } else {
       this.switchSprite("takeHit");
     }

@@ -95,7 +95,8 @@ export class NetworkFighter extends Fighter {
           (this.sprites.heavyAttack &&
             this.image === this.sprites.heavyAttack.image) ||
           (this.sprites.takeHit && this.image === this.sprites.takeHit.image) ||
-          (this.sprites.dodge && this.image === this.sprites.dodge.image);
+          (this.sprites.dodge && this.image === this.sprites.dodge.image) ||
+          (this.sprites.death && this.image === this.sprites.death.image);
 
         if (isNonLooping) {
           this.framesCurrent = this.frameMax - 1;
