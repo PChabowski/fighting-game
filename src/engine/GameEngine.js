@@ -28,6 +28,8 @@ let isRoundOver = false;
 let globalTimer = 60;
 let globalTimerId = null;
 let networkSyncId = null;
+let playroomNetworkInitialized = false;
+let remotePlayers = [];
 
 const keys = {
   a: { pressed: false },
@@ -192,62 +194,64 @@ function startGame(state) {
         // Zamiast onData z PeerJS, Playroom API opiera się na RPC do eventów wysyłanych ad-hoc
         // i stanie synchronizowanym przez onPlayerJoin dla każdej klatki (na graczu).
         
-        playroomRPC.register('jump', () => {
-            if (isHost && enemy) enemy.jump();
-            if (!isHost && player) player.jump();
-        });
-        
-        playroomRPC.register('attack', () => {
-            const target = (isHost ? enemy : player);
-            if (target) target.attack();
-        });
-        
-        playroomRPC.register('heavyAttack', () => {
-            const target = (isHost ? enemy : player);
-            if (target && target.heavyAttack) target.heavyAttack();
-        });
-        
-        playroomRPC.register('dodge', () => {
-            if (isHost && enemy) { enemy.dodge && enemy.dodge(); }
-            if (!isHost && player) { player.dodge && player.dodge(); }
-        });
-        
-        playroomRPC.register('hit', (data) => {
-            if (data.target === 1 && player) {
-                player.takeHit(data.damage);
-                store.getState().updateHealth(1, player.health);
-                if (player.health <= 0) endGame();
-            } else if (data.target === 2 && enemy) {
-                enemy.takeHit(data.damage);
-                store.getState().updateHealth(2, enemy.health);
-                if (enemy.health <= 0) endGame();
-            }
-        });
-        
-        playroomRPC.register('rematch', () => {
-            store.getState().triggerRematch();
-        });
-        
-        playroomRPC.register('main_menu', () => {
-            store.getState().setMultiplayer(false);
-            store.getState().resetGame();
-            window.location.href = window.location.pathname; // czysty URL by uniknąć zapętleń Playroom 
-        });
+        if (!playroomNetworkInitialized) {
+            playroomRPC.register('jump', () => {
+                if (isHost && enemy) enemy.jump();
+                if (!isHost && player) player.jump();
+            });
+            
+            playroomRPC.register('attack', () => {
+                const target = (isHost ? enemy : player);
+                if (target) target.attack();
+            });
+            
+            playroomRPC.register('heavyAttack', () => {
+                const target = (isHost ? enemy : player);
+                if (target && target.heavyAttack) target.heavyAttack();
+            });
+            
+            playroomRPC.register('dodge', () => {
+                if (isHost && enemy) { enemy.dodge && enemy.dodge(); }
+                if (!isHost && player) { player.dodge && player.dodge(); }
+            });
+            
+            playroomRPC.register('hit', (data) => {
+                if (data.target === 1 && player) {
+                    player.takeHit(data.damage);
+                    store.getState().updateHealth(1, player.health);
+                    if (player.health <= 0) endGame();
+                } else if (data.target === 2 && enemy) {
+                    enemy.takeHit(data.damage);
+                    store.getState().updateHealth(2, enemy.health);
+                    if (enemy.health <= 0) endGame();
+                }
+            });
+            
+            playroomRPC.register('rematch', () => {
+                store.getState().triggerRematch();
+            });
+            
+            playroomRPC.register('main_menu', () => {
+                store.getState().setMultiplayer(false);
+                store.getState().resetGame();
+                window.location.href = window.location.pathname; // czysty URL by uniknąć zapętleń Playroom 
+            });
 
-        // Odbieranie synchronizacji stanu z pętli (w Playroom robimy to przez polling co klatkę)
-        const myId = getMyPlayer().id;
-        const remotePlayers = [];
-        onPlayerJoin((p) => {
-            if (p.id !== myId) {
-                remotePlayers.push(p);
-            }
-        });
+            // Odbieranie synchronizacji stanu z pętli (w Playroom robimy to przez polling co klatkę)
+            const myId = getMyPlayer().id;
+            onPlayerJoin((p) => {
+                if (p.id !== myId) {
+                    remotePlayers.push(p);
+                }
+            });
+            playroomNetworkInitialized = true;
+        }
         
         networkSyncId = setInterval(() => {
             // 1. Nadawanie stanu lokalnego fightera
             const localFighter = isHost ? player : enemy;
             if (localFighter && !isRoundOver) {
-                getMyPlayer().setState('fighterState', localFighter.getState(), true); // Send with reliable: true
+                getMyPlayer().setState('fighterState', localFighter.getState(), false); // Send with reliable: false
             }
             
             // 2. Odbieranie i aktualizacja z serwera dla drugiego gracza
@@ -412,11 +416,11 @@ function animate() {
             if (currentLevelConfig && currentLevelConfig.deathZoneY) {
                 if (isP1Local && player.position.y > currentLevelConfig.deathZoneY && player.health > 0) {
                     calculateHit({ damage: 9999 }, player, 1, 9999);
-                    if (isMultiplayer) playroomRPC.call('hit', { target: 1, damage: 9999 }, playroomRPC.Mode.ALL);
+                    if (isMultiplayer) playroomRPC.call('hit', { target: 1, damage: 9999 }, playroomRPC.Mode.OTHERS);
                 }
                 if (isP2Local && enemy.position.y > currentLevelConfig.deathZoneY && enemy.health > 0) {
                     calculateHit({ damage: 9999 }, enemy, 2, 9999);
-                    if (isMultiplayer) playroomRPC.call('hit', { target: 2, damage: 9999 }, playroomRPC.Mode.ALL);
+                    if (isMultiplayer) playroomRPC.call('hit', { target: 2, damage: 9999 }, playroomRPC.Mode.OTHERS);
                 }
             }
         }
@@ -427,7 +431,7 @@ function animate() {
             },
             restartGame: () => {
                 if (isMultiplayer) {
-                    playroomRPC.call('rematch', {}, playroomRPC.Mode.ALL);
+                    playroomRPC.call('rematch', {}, playroomRPC.Mode.OTHERS);
                 }
                 store.getState().triggerRematch();
             },
@@ -486,7 +490,7 @@ function animate() {
                 if (!isMultiplayer || isP1Local) {
                     const dmg = player.isHeavyAttack ? player.damage * 2 : player.damage;
                     calculateHit(player, enemy, 2, dmg);
-                    if (isMultiplayer) playroomRPC.call('hit', { target: 2, damage: dmg }, playroomRPC.Mode.ALL);
+                    if (isMultiplayer) playroomRPC.call('hit', { target: 2, damage: dmg }, playroomRPC.Mode.OTHERS);
                 }
             }
             if (player.isAttacking && player.framesCurrent === pAttackMax - 1) player.isAttacking = false;
@@ -497,7 +501,7 @@ function animate() {
                 if (!isMultiplayer || isP2Local) {
                     const dmg = enemy.isHeavyAttack ? enemy.damage * 2 : enemy.damage;
                     calculateHit(enemy, player, 1, dmg);
-                    if (isMultiplayer) playroomRPC.call('hit', { target: 1, damage: dmg }, playroomRPC.Mode.ALL);
+                    if (isMultiplayer) playroomRPC.call('hit', { target: 1, damage: dmg }, playroomRPC.Mode.OTHERS);
                 }
             }
             if (enemy.isAttacking && enemy.framesCurrent === eAttackMax - 1) enemy.isAttacking = false;
@@ -549,20 +553,20 @@ function handleKeyDown(event) {
         case 'a': keys.a.pressed = true; localFighter.lastKey = 'a'; break;
         case 'w': 
             localFighter.jump(); 
-            if (isMultiplayer) playroomRPC.call('jump', {}, playroomRPC.Mode.ALL);
+            if (isMultiplayer) playroomRPC.call('jump', {}, playroomRPC.Mode.OTHERS);
             break;
         case 's': keys.s.pressed = true; localFighter.lastKey = 's'; break;
         case ' ': 
             localFighter.attack(); 
-            if (isMultiplayer) playroomRPC.call('attack', {}, playroomRPC.Mode.ALL);
+            if (isMultiplayer) playroomRPC.call('attack', {}, playroomRPC.Mode.OTHERS);
             break;
         case 'e':
             localFighter.heavyAttack && localFighter.heavyAttack();
-            if (isMultiplayer) playroomRPC.call('heavyAttack', {}, playroomRPC.Mode.ALL);
+            if (isMultiplayer) playroomRPC.call('heavyAttack', {}, playroomRPC.Mode.OTHERS);
             break;
         case 'f':
             localFighter.dodge && localFighter.dodge();
-            if (isMultiplayer) playroomRPC.call('dodge', {}, playroomRPC.Mode.ALL);
+            if (isMultiplayer) playroomRPC.call('dodge', {}, playroomRPC.Mode.OTHERS);
             break;
 
         case 'ArrowRight': if (isMultiplayer) break; keys.ArrowRight.pressed = true; enemy.lastKey = 'ArrowRight'; break;

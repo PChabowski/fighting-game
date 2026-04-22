@@ -11,6 +11,9 @@ export default function MultiplayerMenu() {
       let urlStr = window.location.href;
       let roomCode = null;
 
+      // Ensure global multiplayer flag is active
+      useGameStore.getState().setMultiplayer(true);
+
       // Extract room code if it exists (handles ?r=, &r=, #r=, #?r=)
       const match = urlStr.match(/[#?&]r=([^&]+)/);
       if (match && match[1]) {

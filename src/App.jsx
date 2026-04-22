@@ -30,6 +30,7 @@ function MainViews({ needRefresh, setNeedRefresh, updateServiceWorker }) {
   useEffect(() => {
     const urlStr = window.location.href;
     if (urlStr.match(/[#?&]r=/) && view === 'MENU') {
+       useGameStore.getState().setMultiplayer(true);
        setView('MULTI_MENU');
     }
   }, [view, setView]);

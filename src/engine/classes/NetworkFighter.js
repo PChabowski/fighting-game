@@ -13,7 +13,9 @@ export class NetworkFighter extends Fighter {
       facing: "right",
     };
 
-    this._stateSeq = 0;
+    // Use Date.now() instead of 0 to ensure the sequence counter is always 
+    // greater than any cached Playroom state from the previous round (rematch)
+    this._stateSeq = Date.now();
     this._lastReceivedSeq = -1;
   }
 
