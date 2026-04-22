@@ -62,19 +62,39 @@ function endGame() {
     if (globalTimerId) clearTimeout(globalTimerId);
     
     let winnerMsg = 'Tie';
-    if (player.health > enemy.health) winnerMsg = 'Player 1';
+    const s = store.getState();
+    if (s.player1Stocks > s.player2Stocks) winnerMsg = 'Player 1';
+    else if (s.player1Stocks < s.player2Stocks) winnerMsg = 'Player 2';
+    else if (player.health > enemy.health) winnerMsg = 'Player 1';
     else if (player.health < enemy.health) winnerMsg = 'Player 2';
     
     store.getState().setWinner(winnerMsg);
+}
+
+function handleDeathCheck(defender, playerNum) {
+    if (defender.health <= 0) {
+        const state = store.getState();
+        const pStocks = playerNum === 1 ? state.player1Stocks : state.player2Stocks;
+        
+        if (pStocks > 1) {
+            state.loseStock(playerNum);
+            const safeX = currentLevelConfig && currentLevelConfig.startPositions
+                ? currentLevelConfig.startPositions[playerNum === 1 ? 'player' : 'enemy'].x
+                : (playerNum === 1 ? 150 : 800);
+            defender.respawn(safeX, -150);
+            state.updateHealth(playerNum, 100);
+        } else {
+            state.loseStock(playerNum);
+            endGame();
+        }
+    }
 }
 
 function calculateHit(attacker, defender, playerNum, damageOverride = null) {
     const finalDamage = damageOverride !== null ? damageOverride : attacker.damage;
     defender.takeHit(finalDamage);
     store.getState().updateHealth(playerNum, defender.health);
-    if (defender.health <= 0) {
-        endGame();
-    }
+    handleDeathCheck(defender, playerNum);
 }
 
 export function initGameEngine(canvasElement, useGameStore) {
@@ -219,11 +239,11 @@ function startGame(state) {
                 if (data.target === 1 && player) {
                     player.takeHit(data.damage);
                     store.getState().updateHealth(1, player.health);
-                    if (player.health <= 0) endGame();
+                    handleDeathCheck(player, 1);
                 } else if (data.target === 2 && enemy) {
                     enemy.takeHit(data.damage);
                     store.getState().updateHealth(2, enemy.health);
-                    if (enemy.health <= 0) endGame();
+                    handleDeathCheck(enemy, 2);
                 }
             });
             
@@ -251,15 +271,42 @@ function startGame(state) {
             // 1. Nadawanie stanu lokalnego fightera
             const localFighter = isHost ? player : enemy;
             if (localFighter && !isRoundOver) {
-                getMyPlayer().setState('fighterState', localFighter.getState(), false); // Send with reliable: false
+                const s = store.getState();
+                const networkState = localFighter.getState();
+                networkState.stocks = isHost ? s.player1Stocks : s.player2Stocks;
+                getMyPlayer().setState('fighterState', networkState, false); // Send with reliable: false
             }
             
             // 2. Odbieranie i aktualizacja z serwera dla drugiego gracza
             remotePlayers.forEach(p => {
                 const state = p.getState('fighterState');
                 if (state) {
-                    if (isHost && enemy) enemy.receiveState(state);
-                    if (!isHost && player) player.receiveState(state);
+                    if (isHost && enemy) {
+                        enemy.receiveState(state);
+                        // Korekta na wypadek błędu/rozjazdu po stronie UI
+                        const s = store.getState();
+                        if (s.enemyHealth !== enemy.health) {
+                            s.updateHealth(2, enemy.health);
+                        }
+                        // Synchronizacja zapasowych żyć dla klienta
+                        if (typeof state.stocks === 'number' && s.player2Stocks !== state.stocks) {
+                            // Preferujemy ilość żyć wskazywaną przez właściciela (autora stanu)
+                            if (s.player2Stocks > state.stocks) s.setStocks(2, state.stocks);
+                        }
+                    }
+                    if (!isHost && player) {
+                        player.receiveState(state);
+                        // Korekta na wypadek błędu/rozjazdu po stronie UI
+                        const s = store.getState();
+                        if (s.playerHealth !== player.health) {
+                            s.updateHealth(1, player.health);
+                        }
+                        // Synchronizacja zapasowych żyć dla hosta
+                        if (typeof state.stocks === 'number' && s.player1Stocks !== state.stocks) {
+                            // Preferujemy ilość żyć wskazywaną przez właściciela (autora stanu)
+                            if (s.player1Stocks > state.stocks) s.setStocks(1, state.stocks);
+                        }
+                    }
                 }
             });
         }, 1000 / 30);

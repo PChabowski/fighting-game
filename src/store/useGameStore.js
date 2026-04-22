@@ -9,6 +9,8 @@ const useGameStore = create((set) => ({
   // Dane walki
   playerHealth: 100,
   enemyHealth: 100,
+  player1Stocks: 3,
+  player2Stocks: 3,
   timer: 60,
   winner: null, // np. 'Player 1', 'Player 2', 'Tie'
   gameMode: 'PVP', // 'PVP' lub 'ARCADE'
@@ -37,9 +39,17 @@ const useGameStore = create((set) => ({
     playerHealth: player === 1 ? Math.max(0, hp) : state.playerHealth,
     enemyHealth: player === 2 ? Math.max(0, hp) : state.enemyHealth,
   })),
+  loseStock: (player) => set((state) => ({
+    player1Stocks: player === 1 ? Math.max(0, state.player1Stocks - 1) : state.player1Stocks,
+    player2Stocks: player === 2 ? Math.max(0, state.player2Stocks - 1) : state.player2Stocks,
+  })),
+  setStocks: (player, stocks) => set((state) => ({
+    player1Stocks: player === 1 ? Math.max(0, stocks) : state.player1Stocks,
+    player2Stocks: player === 2 ? Math.max(0, stocks) : state.player2Stocks,
+  })),
   setTimer: (time) => set({ timer: time }),
   setWinner: (winnerName) => set({ winner: winnerName }),
-  resetGame: () => set({ playerHealth: 100, enemyHealth: 100, timer: 60, winner: null }),
+  resetGame: () => set({ playerHealth: 100, enemyHealth: 100, player1Stocks: 3, player2Stocks: 3, timer: 60, winner: null }),
 }));
 
 export default useGameStore;

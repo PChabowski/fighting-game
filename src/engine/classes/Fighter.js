@@ -57,6 +57,7 @@ export class Fighter extends Sprite {
     this.dead = false;
     this._pendingDeath = false;
     this.canAttack = true; // Flaga blokująca spamowanie atakiem
+    this.invincibilityTimer = 0; // Timer klatek nietykalności po respawnie
 
     for (const sprite in this.sprites) {
       this.sprites[sprite].image = new Image();
@@ -75,6 +76,7 @@ export class Fighter extends Sprite {
 
   restart(startPosition) {
     this.dead = false;
+    this._pendingDeath = false;
     this.health = 100;
     this.position = { ...startPosition };
     this.velocity = { x: 0, y: 0 };
@@ -84,6 +86,7 @@ export class Fighter extends Sprite {
     this.isDodging = false;
     this.dodgeTimer = 0;
     this.dodgeCooldown = 0;
+    this.invincibilityTimer = 0;
     this.canDoubleJump = true;
     this.framesElapsed = 0;
     this.framesCurrent = 0;
@@ -96,8 +99,40 @@ export class Fighter extends Sprite {
     }
   }
 
+  respawn(safeX, startY = -150) {
+    this.dead = false;
+    this._pendingDeath = false;
+    this.health = 100;
+    this.position = { x: safeX, y: startY };
+    this.velocity = { x: 0, y: 0 };
+    this.canAttack = true;
+    this.isAttacking = false;
+    this.isHeavyAttack = false;
+    this.isDodging = false;
+    this.dodgeTimer = 0;
+    this.dodgeCooldown = 0;
+    this.invincibilityTimer = 180; // ~3 sekundy przy 60 FPS
+    this.canDoubleJump = true;
+    this.framesElapsed = 0;
+    this.framesCurrent = 0;
+
+    if (this.sprites.fall) {
+      this.image = this.sprites.fall.image;
+      this.frameMax = this.sprites.fall.frameMax;
+      this.framesCurrent = 0;
+    } else if (this.sprites.idle) {
+      this.image = this.sprites.idle.image;
+      this.frameMax = this.sprites.idle.frameMax;
+      this.framesCurrent = 0;
+    }
+  }
+
   update(c, levelConfig, gravity) {
-    if (this.dodgeTimer > 0) {
+    if (this.invincibilityTimer > 0) {
+      this.invincibilityTimer--;
+    }
+
+    if (this.dodgeTimer > 0 || (this.invincibilityTimer > 0 && Math.floor(this.invincibilityTimer / 10) % 2 === 0)) {
       c.globalAlpha = 0.5;
     } else {
       c.globalAlpha = 1.0;
@@ -265,6 +300,7 @@ export class Fighter extends Sprite {
       health: this.health,
       dead: this.dead,
       canAttack: this.canAttack, // przesyłamy flagę cooldownu po sieci
+      invincibilityTimer: this.invincibilityTimer,
     };
   }
 
@@ -377,6 +413,8 @@ export class Fighter extends Sprite {
   }
 
   takeHit(damage = 20) {
+    if (this.dead || this._pendingDeath) return;
+    if (this.invincibilityTimer > 0) return; // Nietykalność po respawnie
     if (this.isDodging || this.dodgeTimer > 0) return; // Uniki posiadają i-frames
 
     this.health -= damage;

@@ -38,12 +38,19 @@ export class NetworkFighter extends Fighter {
       if (this.dodgeCooldown > 0) {
         this.dodgeCooldown--;
       }
-      // Przywrócenie półprzezroczystości gdy unik włączony
-      if (this.dodgeTimer > 0) {
+      
+      if (this.invincibilityTimer > 0) {
+        this.invincibilityTimer--;
+      }
+
+      // Przywrócenie półprzezroczystości gdy unik włączony lub w czasie i-frames (respawn)
+      if (this.dodgeTimer > 0 || (this.invincibilityTimer > 0 && Math.floor(this.invincibilityTimer / 10) % 2 === 0)) {
         c.globalAlpha = 0.5;
-        this.dodgeTimer--;
-        if (this.dodgeTimer === 0) {
-          this.isDodging = false;
+        if (this.dodgeTimer > 0) {
+          this.dodgeTimer--;
+          if (this.dodgeTimer === 0) {
+            this.isDodging = false;
+          }
         }
       }
 
@@ -158,6 +165,22 @@ export class NetworkFighter extends Fighter {
     } else {
       // Jeśli nie jesteśmy w trybie blokady, pozwalamy na zmianę
       if (data.currentAnimation && this.sprites[data.currentAnimation]) {
+        
+        // Zabezpieczenie przed tzw. "pośmiertną blokadą" z powodu opóźnień w pakietach:
+        // Jeżeli postać ożyła (health > 0), a mimo to wisi w animacji śmierci lub dostaje spóźniony pakiet "death"
+        if (data.health > 0) {
+          if (this.image === this.sprites.death?.image && data.currentAnimation !== "death") {
+            // Wymuś wyjście ze stanu śmierci (usunięcie blokady)
+            this.dead = false;
+            this._pendingDeath = false;
+            this.image = this.sprites.idle?.image || this.image;
+          }
+          if (data.currentAnimation === "death") {
+            // Ignoruj fałszywy/spóźniony pakiet animacji śmierci, gdy gracz ma już HP po respawnie
+            data.currentAnimation = "idle";
+          }
+        }
+
         this.switchSprite(data.currentAnimation);
 
         // Synchronizuj klatkę TYLKO dla idle/run, by uniknąć stutteru nóg
@@ -175,5 +198,6 @@ export class NetworkFighter extends Fighter {
     if (typeof data.isAttacking === "boolean") this.isAttacking = data.isAttacking;
     if (typeof data.isHeavyAttack === "boolean") this.isHeavyAttack = data.isHeavyAttack;
     if (typeof data.framesHold === "number") this.framesHold = data.framesHold;
+    if (typeof data.invincibilityTimer === "number") this.invincibilityTimer = data.invincibilityTimer;
   }
 }
