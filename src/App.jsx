@@ -67,7 +67,6 @@ function MainViews({ needRefresh, setNeedRefresh, updateServiceWorker }) {
       {view === 'MENU' && <GameMenu />}
       {view === 'CHAR_SELECT' && <CharacterSelect />}
       {view === 'MULTI_MENU' && <MultiplayerMenu />}
-// Opcja usunieta
       {view === 'MULTI_LOBBY' && <MultiplayerLobby />}
       {view === 'GAME' && <GameInterface />}
       <MobileOrientationModal />
