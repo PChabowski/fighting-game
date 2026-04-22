@@ -7,7 +7,7 @@ import { GRAVITY } from './utils/constants.js';
 import { isMobile } from './utils/mobile.js';
 import { alignSpriteToGround } from './utils/scale.js';
 import { initResponsiveCanvas } from './utils/responsive.js';
-import { peerManager } from './utils/peer.js';
+import { onPlayerJoin, getMyPlayer, playroomRPC } from './utils/playroom.js';
 import { NetworkFighter } from './classes/NetworkFighter.js';
 import { globalAudioManager } from './classes/AudioManager.js';
 import { ROSTER } from './utils/roster.js';
@@ -189,54 +189,75 @@ function startGame(state) {
         player = new NetworkFighter(getFighterConfig(ROSTER[p1Choice], currentLevelConfig.startPositions.player, { isRemote: !isHost }));
         enemy = new NetworkFighter(getFighterConfig(ROSTER[p2Choice], currentLevelConfig.startPositions.enemy, { isRemote: isHost, colorFilter: enemyFilterStyle }));
         
-        peerManager.onData((data) => {
-            if (data.type === 'stateUpdate') {
-                if (isHost && enemy) enemy.receiveState(data.state);
-                if (!isHost && player) player.receiveState(data.state);
-            } else if (data.type === 'jump') {
-                if (isHost && enemy) enemy.jump();
-                if (!isHost && player) player.jump();
-            } else if (data.type === 'attack') {
-                const target = (isHost ? enemy : player);
-                if (target) {
-                    target.attack();
-                    // Ważne: po ręcznym wyzwoleniu ataku, ignorujemy synchronizację klatek 
-                    // przez krótki czas, co już zapewnia poprawiony NetworkFighter.
-                }
-            } else if (data.type === 'heavyAttack') {
-                const target = (isHost ? enemy : player);
-                if (target && target.heavyAttack) target.heavyAttack();
-            } else if (data.type === 'dodge') {
-                if (isHost && enemy) { enemy.dodge && enemy.dodge(); }
-                if (!isHost && player) { player.dodge && player.dodge(); }
-            } else if (data.type === 'hit') {
-                if (data.target === 1 && player) {
-                    player.takeHit(data.damage);
-                    store.getState().updateHealth(1, player.health);
-                    if (player.health <= 0) endGame();
-                } else if (data.target === 2 && enemy) {
-                    enemy.takeHit(data.damage);
-                    store.getState().updateHealth(2, enemy.health);
-                    if (enemy.health <= 0) endGame();
-                }
-            } else if (data.type === 'rematch') {
-                store.getState().triggerRematch();
-            } else if (data.type === 'main_menu') {
-                peerManager.disconnect();
-                store.getState().setMultiplayer(false);
-                store.getState().resetGame();
-                store.getState().setView('MENU');
+        // Zamiast onData z PeerJS, Playroom API opiera się na RPC do eventów wysyłanych ad-hoc
+        // i stanie synchronizowanym przez onPlayerJoin dla każdej klatki (na graczu).
+        
+        playroomRPC.register('jump', () => {
+            if (isHost && enemy) enemy.jump();
+            if (!isHost && player) player.jump();
+        });
+        
+        playroomRPC.register('attack', () => {
+            const target = (isHost ? enemy : player);
+            if (target) target.attack();
+        });
+        
+        playroomRPC.register('heavyAttack', () => {
+            const target = (isHost ? enemy : player);
+            if (target && target.heavyAttack) target.heavyAttack();
+        });
+        
+        playroomRPC.register('dodge', () => {
+            if (isHost && enemy) { enemy.dodge && enemy.dodge(); }
+            if (!isHost && player) { player.dodge && player.dodge(); }
+        });
+        
+        playroomRPC.register('hit', (data) => {
+            if (data.target === 1 && player) {
+                player.takeHit(data.damage);
+                store.getState().updateHealth(1, player.health);
+                if (player.health <= 0) endGame();
+            } else if (data.target === 2 && enemy) {
+                enemy.takeHit(data.damage);
+                store.getState().updateHealth(2, enemy.health);
+                if (enemy.health <= 0) endGame();
+            }
+        });
+        
+        playroomRPC.register('rematch', () => {
+            store.getState().triggerRematch();
+        });
+        
+        playroomRPC.register('main_menu', () => {
+            store.getState().setMultiplayer(false);
+            store.getState().resetGame();
+            window.location.href = window.location.pathname; // czysty URL by uniknąć zapętleń Playroom 
+        });
+
+        // Odbieranie synchronizacji stanu z pętli (w Playroom robimy to przez polling co klatkę)
+        const myId = getMyPlayer().id;
+        const remotePlayers = [];
+        onPlayerJoin((p) => {
+            if (p.id !== myId) {
+                remotePlayers.push(p);
             }
         });
         
         networkSyncId = setInterval(() => {
+            // 1. Nadawanie stanu lokalnego fightera
             const localFighter = isHost ? player : enemy;
             if (localFighter && !isRoundOver) {
-                peerManager.send({
-                    type: 'stateUpdate',
-                    state: localFighter.getState()
-                });
+                getMyPlayer().setState('fighterState', localFighter.getState(), true); // Send with reliable: true
             }
+            
+            // 2. Odbieranie i aktualizacja z serwera dla drugiego gracza
+            remotePlayers.forEach(p => {
+                const state = p.getState('fighterState');
+                if (state) {
+                    if (isHost && enemy) enemy.receiveState(state);
+                    if (!isHost && player) player.receiveState(state);
+                }
+            });
         }, 1000 / 30);
     } else {
         player = new Fighter(getFighterConfig(ROSTER[p1Choice], currentLevelConfig.startPositions.player));
@@ -391,11 +412,11 @@ function animate() {
             if (currentLevelConfig && currentLevelConfig.deathZoneY) {
                 if (isP1Local && player.position.y > currentLevelConfig.deathZoneY && player.health > 0) {
                     calculateHit({ damage: 9999 }, player, 1, 9999);
-                    if (isMultiplayer) peerManager.send({ type: 'hit', target: 1, damage: 9999 });
+                    if (isMultiplayer) playroomRPC.call('hit', { target: 1, damage: 9999 }, playroomRPC.Mode.ALL);
                 }
                 if (isP2Local && enemy.position.y > currentLevelConfig.deathZoneY && enemy.health > 0) {
                     calculateHit({ damage: 9999 }, enemy, 2, 9999);
-                    if (isMultiplayer) peerManager.send({ type: 'hit', target: 2, damage: 9999 });
+                    if (isMultiplayer) playroomRPC.call('hit', { target: 2, damage: 9999 }, playroomRPC.Mode.ALL);
                 }
             }
         }
@@ -406,7 +427,7 @@ function animate() {
             },
             restartGame: () => {
                 if (isMultiplayer) {
-                    peerManager.send({ type: 'rematch' });
+                    playroomRPC.call('rematch', {}, playroomRPC.Mode.ALL);
                 }
                 store.getState().triggerRematch();
             },
@@ -465,7 +486,7 @@ function animate() {
                 if (!isMultiplayer || isP1Local) {
                     const dmg = player.isHeavyAttack ? player.damage * 2 : player.damage;
                     calculateHit(player, enemy, 2, dmg);
-                    if (isMultiplayer) peerManager.send({ type: 'hit', target: 2, damage: dmg });
+                    if (isMultiplayer) playroomRPC.call('hit', { target: 2, damage: dmg }, playroomRPC.Mode.ALL);
                 }
             }
             if (player.isAttacking && player.framesCurrent === pAttackMax - 1) player.isAttacking = false;
@@ -476,7 +497,7 @@ function animate() {
                 if (!isMultiplayer || isP2Local) {
                     const dmg = enemy.isHeavyAttack ? enemy.damage * 2 : enemy.damage;
                     calculateHit(enemy, player, 1, dmg);
-                    if (isMultiplayer) peerManager.send({ type: 'hit', target: 1, damage: dmg });
+                    if (isMultiplayer) playroomRPC.call('hit', { target: 1, damage: dmg }, playroomRPC.Mode.ALL);
                 }
             }
             if (enemy.isAttacking && enemy.framesCurrent === eAttackMax - 1) enemy.isAttacking = false;
@@ -528,20 +549,20 @@ function handleKeyDown(event) {
         case 'a': keys.a.pressed = true; localFighter.lastKey = 'a'; break;
         case 'w': 
             localFighter.jump(); 
-            if (isMultiplayer) peerManager.send({ type: 'jump' });
+            if (isMultiplayer) playroomRPC.call('jump', {}, playroomRPC.Mode.ALL);
             break;
         case 's': keys.s.pressed = true; localFighter.lastKey = 's'; break;
         case ' ': 
             localFighter.attack(); 
-            if (isMultiplayer) peerManager.send({ type: 'attack' });
+            if (isMultiplayer) playroomRPC.call('attack', {}, playroomRPC.Mode.ALL);
             break;
         case 'e':
             localFighter.heavyAttack && localFighter.heavyAttack();
-            if (isMultiplayer) peerManager.send({ type: 'heavyAttack' });
+            if (isMultiplayer) playroomRPC.call('heavyAttack', {}, playroomRPC.Mode.ALL);
             break;
         case 'f':
             localFighter.dodge && localFighter.dodge();
-            if (isMultiplayer) peerManager.send({ type: 'dodge' });
+            if (isMultiplayer) playroomRPC.call('dodge', {}, playroomRPC.Mode.ALL);
             break;
 
         case 'ArrowRight': if (isMultiplayer) break; keys.ArrowRight.pressed = true; enemy.lastKey = 'ArrowRight'; break;

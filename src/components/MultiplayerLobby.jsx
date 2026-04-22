@@ -1,27 +1,30 @@
 import React, { useEffect, useState, useRef } from 'react';
 import useGameStore from '../store/useGameStore';
 import { ROSTER } from '../engine/utils/roster';
-import { peerManager } from '../engine/utils/peer';
+import { onPlayerJoin, getMyPlayer, isGameHost } from '../engine/utils/playroom';
 import { LEVELS, DEFAULT_LEVEL } from '../engine/scenes/index';
 
+import { usePlayersList } from 'playroomkit';
+
 export default function MultiplayerLobby() {
-  const { setView, isHost } = useGameStore();
+  const { setView } = useGameStore();
   const rosterList = Object.values(ROSTER);
   const mapList = Object.values(LEVELS);
 
-  const [peerId, setPeerId] = useState(null);
-  const [status, setStatus] = useState(isHost ? 'Waiting for player' : 'Connecting to host');
   const [localSelection, setLocalSelection] = useState(null);
   const [remoteSelection, setRemoteSelection] = useState(null);
   const [activeMap, setActiveMap] = useState(DEFAULT_LEVEL);
   const [showMapSelect, setShowMapSelect] = useState(false);
   const [copied, setCopied] = useState(false);
   const [dots, setDots] = useState('');
-
-  const localSelectionRef = useRef(localSelection);
-  useEffect(() => {
-    localSelectionRef.current = localSelection;
-  }, [localSelection]);
+  
+  const isHost = useGameStore(state => state.isHost);
+  
+  // Natively use Playroom's hook to track active players
+  const activePlayers = usePlayersList(true);
+  
+  const connectedCount = activePlayers.length;
+  const status = connectedCount >= 2 ? `Connected! Players: ${connectedCount}` : `Waiting... Players: 1/${connectedCount}`;
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -31,128 +34,92 @@ export default function MultiplayerLobby() {
   }, []);
 
   useEffect(() => {
-    if (isHost) {
-      peerManager.initHost();
-      peerManager.onOpen((id) => {
-        setPeerId(id);
-      });
-      peerManager.onConnection(() => {
-        setStatus('Connected to player!');
-        if (localSelectionRef.current) {
-          setTimeout(() => {
-            peerManager.send({ type: 'select', characterId: localSelectionRef.current });
-          }, 500);
+    // Poll for remote player states
+    const pollInterval = setInterval(() => {
+        const myId = getMyPlayer()?.id;
+        if (!myId) return;
+
+        let allReady = false;
+        let activeMapFromHost = null;
+
+        activePlayers.forEach(p => {
+             if (p.id !== myId) {
+                  // Fallback: also check p.getState returning empty and try to force update if possible.
+                  const rSelection = p.getState('characterSelection');
+                  if (rSelection !== undefined && rSelection !== null) {
+                      setRemoteSelection(rSelection);
+                  }
+             }
+             const readyData = p.getState('readyToLoadMap');
+             if (readyData && readyData.start) {
+                  allReady = true;
+                  if (readyData.levelId) {
+                       activeMapFromHost = readyData.levelId;
+                  }
+             }
+        });
+
+        if (allReady) {
+            clearInterval(pollInterval);
+            if (activeMapFromHost) {
+                useGameStore.getState().setSelectedLevel(activeMapFromHost);
+            }
+            // Fetch latest local vs remote selection (they might be stored in state slightly out of sync)
+            const myChar = getMyPlayer().getState('characterSelection');
+            const p1 = isHost ? myChar : getRemoteChar(activePlayers, myId);
+            const p2 = isHost ? getRemoteChar(activePlayers, myId) : myChar;
+            useGameStore.setState({ 
+                p1Character: p1 || localSelection, 
+                p2Character: p2 || remoteSelection 
+            });
+            setView('GAME');
         }
-      });
-      peerManager.onClose(() => {
-        setStatus('Waiting for player');
-        setRemoteSelection(null);
-      });
-      peerManager.onData((data) => {
-        if (data.type === 'select') {
-           setRemoteSelection(data.characterId);
-        }
-      });
-    } else {
-      const targetId = useGameStore.getState().remotePeerId;
-      peerManager.connectToHost(targetId);
-      peerManager.onConnection(() => {
-        setStatus('Connected to host!');
-        if (localSelectionRef.current) {
-          setTimeout(() => {
-            peerManager.send({ type: 'select', characterId: localSelectionRef.current });
-          }, 500);
-        }
-      });
-      peerManager.onClose(() => {
-        setStatus('Connection lost. Connecting to host');
-        setRemoteSelection(null);
-      });
-      peerManager.onData((data) => {
-        if (data.type === 'select') {
-          setRemoteSelection(data.characterId);
-        }
-        if (data.type === 'start') {
-          if (data.levelId) {
-            useGameStore.getState().setSelectedLevel(data.levelId);
-          }
-          useGameStore.setState({ 
-            p1Character: data.p1Character, 
-            p2Character: data.p2Character 
-          });
-          setView('GAME');
-        }
-      });
-    }
+    }, 100);
 
     return () => {
-      // Disconnect handled by leave
+       clearInterval(pollInterval);
     };
-  }, [isHost]);
+  }, [activePlayers, isHost, localSelection, remoteSelection]);
+
+  const getRemoteChar = (playersArr, myId) => {
+      const p = playersArr.find(pl => pl.id !== myId);
+      return p ? p.getState('characterSelection') : null;
+  };
 
   const handleSelect = (charId) => {
     setLocalSelection(charId);
-    peerManager.send({ type: 'select', characterId: charId });
+    getMyPlayer().setState('characterSelection', charId, true);
   };
 
   const handleStart = () => {
     if (!localSelection || !remoteSelection) return;
     
+    // Zapiszmy informację globalnie u Playroom Hosta by wystartować
+    getMyPlayer().setState('readyToLoadMap', { start: true, levelId: activeMap }, true);
+    
+    const p1 = isHost ? localSelection : remoteSelection;
+    const p2 = isHost ? remoteSelection : localSelection;
+
     useGameStore.getState().setSelectedLevel(activeMap);
-    
-    peerManager.send({ 
-      type: 'start', 
-      p1Character: localSelection, 
-      p2Character: remoteSelection,
-      levelId: activeMap
-    });
-    
-    useGameStore.setState({ 
-      p1Character: localSelection, 
-      p2Character: remoteSelection 
-    });
+    useGameStore.setState({ p1Character: p1, p2Character: p2 });
     setView('GAME');
   };
+// Nothing
 
   const handleLeave = () => {
-    peerManager.disconnect();
-    useGameStore.setState({ isMultiplayer: false });
-    setView('MULTI_MENU');
+    // Wyczyść parametr ?r= z URL, żeby nie zapętlić dołączania jako gość
+    window.location.href = window.location.pathname;
   };
 
   const handleCopyId = () => {
-    if (peerId) {
-      if (navigator.clipboard && window.isSecureContext) {
-        navigator.clipboard.writeText(peerId)
-          .then(() => {
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
-          })
-          .catch(err => console.error('Kopiowanie nie powiodło się:', err));
-      } else {
-        // Fallback dla starszych przeglądarek lub połączeń przez HTTP (np. sieć lokalna LAN)
-        const textArea = document.createElement("textarea");
-        textArea.value = peerId;
-        
-        // Ukrywamy element
-        textArea.style.position = "fixed";
-        textArea.style.left = "-9999px";
-        textArea.style.top = "-9999px";
-        
-        document.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
-        
-        try {
-          document.execCommand('copy');
+    const url = window.location.href;
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(url)
+        .then(() => {
           setCopied(true);
           setTimeout(() => setCopied(false), 2000);
-        } catch (err) {
-          console.error('Kopiowanie awaryjne nie powiodło się', err);
-        }
-        
-        document.body.removeChild(textArea);
-      }
+        })
+        .catch(err => console.error('Kopiowanie nie powiodło się:', err));
     }
   };
 
@@ -228,11 +195,11 @@ export default function MultiplayerLobby() {
         )}
       </div>
       
-      {isHost && peerId && (
+      {isHost && (
         <div style={{ marginBottom: '20px' }}>
           <div 
             onClick={handleCopyId}
-            title="Click to copy"
+            title="Click to copy url"
             style={{
               fontSize: '14px',
               color: '#fff',
@@ -243,7 +210,7 @@ export default function MultiplayerLobby() {
               textAlign: 'center'
             }}
           >
-            {copied ? 'ID Copied!' : `Your ID: ${peerId}`}
+            {copied ? 'Link Copied!' : `Copy Invite Link`}
           </div>
         </div>
       )}

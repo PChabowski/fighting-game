@@ -1,6 +1,6 @@
 import React from 'react';
 import useGameStore from '../../store/useGameStore';
-import { peerManager } from '../../engine/utils/peer';
+import { playroomRPC } from '../../engine/utils/playroom';
 
 export default function WinModal() {
   const winner = useGameStore((state) => state.winner);
@@ -15,7 +15,7 @@ export default function WinModal() {
         className="button menu-button"
         onClick={() => {
           if (isMultiplayer) {
-            peerManager.send({ type: 'rematch' });
+            playroomRPC.call('rematch', {}, playroomRPC.Mode.ALL);
           }
           useGameStore.getState().triggerRematch();
         }}
@@ -26,9 +26,10 @@ export default function WinModal() {
         className="button menu-button"
         onClick={() => {
           if (isMultiplayer) {
-            peerManager.send({ type: 'main_menu' });
-            peerManager.disconnect();
+            playroomRPC.call('main_menu', {}, playroomRPC.Mode.ALL);
             useGameStore.getState().setMultiplayer(false);
+            window.location.href = window.location.pathname; // Wyjście do czystego URLa bez r=
+            return;
           }
           useGameStore.getState().resetGame();
           useGameStore.getState().setView('MENU');

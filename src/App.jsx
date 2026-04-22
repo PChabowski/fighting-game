@@ -10,7 +10,6 @@ import GameMenu from './components/GameMenu';
 import CharacterSelect from './components/CharacterSelect';
 import MultiplayerMenu from './components/MultiplayerMenu';
 import MultiplayerLobby from './components/MultiplayerLobby';
-import JoinMenu from './components/JoinMenu';
 import GameInterface from './components/GameInterface';
 import MobileOrientationModal from './components/MobileOrientationModal';
 import UpdateModal from './components/ui/UpdateModal';
@@ -22,8 +21,18 @@ import CookieBanner from './components/CookieBanner';
 // Keep MainViews stable across App re-renders to avoid remounting GameCanvas
 function MainViews({ needRefresh, setNeedRefresh, updateServiceWorker }) {
   const view = useGameStore(state => state.view);
+  const setView = useGameStore(state => state.setView);
+  const setPlayroomData = useGameStore(state => state.setPlayroomData);
 
   useGamepadMenu(view);
+
+  // Auto-join Playroom if URL has room code (r=...)
+  useEffect(() => {
+    const urlStr = window.location.href;
+    if (urlStr.match(/[#?&]r=/) && view === 'MENU') {
+       setView('MULTI_MENU');
+    }
+  }, [view, setView]);
 
   useEffect(() => {
     switch (view) {
@@ -57,7 +66,7 @@ function MainViews({ needRefresh, setNeedRefresh, updateServiceWorker }) {
       {view === 'MENU' && <GameMenu />}
       {view === 'CHAR_SELECT' && <CharacterSelect />}
       {view === 'MULTI_MENU' && <MultiplayerMenu />}
-      {view === 'MULTI_JOIN' && <JoinMenu />}
+// Opcja usunieta
       {view === 'MULTI_LOBBY' && <MultiplayerLobby />}
       {view === 'GAME' && <GameInterface />}
       <MobileOrientationModal />

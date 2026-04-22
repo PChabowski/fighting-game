@@ -15,10 +15,9 @@ const useGameStore = create((set) => ({
   
   // Dane multiplayera
   isMultiplayer: false,
-  peerId: null,
-  connection: null,
   isHost: true,
-  remotePeerId: null,
+  multiplayerStatus: 'idle', // 'idle' | 'loading' | 'ready'
+  playroomPlayers: [], // lista pobranych graczy Playroom
 
   // Wyzwalacz rewanżu
   rematchTrigger: 0,
@@ -28,7 +27,7 @@ const useGameStore = create((set) => ({
   setView: (newView) => set({ view: newView }),
   setMultiplayer: (val) => set({ isMultiplayer: val }),
   setGameMode: (mode) => set({ gameMode: mode }),
-  setConnectionData: (peerId, conn) => set({ peerId, connection: conn }),
+  setPlayroomData: (status, players) => set({ multiplayerStatus: status, playroomPlayers: players }),
   setSelectedLevel: (levelId) => set({ selectedLevel: levelId }),
   
   // Akcje do wywoływania z poziomu silnika Canvas/JavaScript
