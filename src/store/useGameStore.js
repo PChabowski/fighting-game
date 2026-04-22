@@ -16,6 +16,7 @@ const useGameStore = create((set) => ({
   // Dane multiplayera
   isMultiplayer: false,
   isHost: true,
+  isMatchmaking: false,
   multiplayerStatus: 'idle', // 'idle' | 'loading' | 'ready'
   playroomPlayers: [], // lista pobranych graczy Playroom
 
@@ -26,6 +27,7 @@ const useGameStore = create((set) => ({
   // Akcje do wywoływania z poziomu interfejsu React
   setView: (newView) => set({ view: newView }),
   setMultiplayer: (val) => set({ isMultiplayer: val }),
+  setIsMatchmaking: (val) => set({ isMatchmaking: val }),
   setGameMode: (mode) => set({ gameMode: mode }),
   setPlayroomData: (status, players) => set({ multiplayerStatus: status, playroomPlayers: players }),
   setSelectedLevel: (levelId) => set({ selectedLevel: levelId }),

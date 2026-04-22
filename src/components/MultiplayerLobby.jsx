@@ -15,16 +15,22 @@ export default function MultiplayerLobby() {
   const [remoteSelection, setRemoteSelection] = useState(null);
   const [activeMap, setActiveMap] = useState(DEFAULT_LEVEL);
   const [showMapSelect, setShowMapSelect] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [copied, setCopied] = useState(false);
   const [dots, setDots] = useState('');
   
   const isHost = useGameStore(state => state.isHost);
+  const isMatchmaking = useGameStore(state => state.isMatchmaking);
   
   // Natively use Playroom's hook to track active players
   const activePlayers = usePlayersList(true);
   
   const connectedCount = activePlayers.length;
-  const status = connectedCount >= 2 ? `Connected! Players: ${connectedCount}` : `Waiting... Players: 1/${connectedCount}`;
+  
+  // Custom status message depending on mode
+  let status = connectedCount >= 2 
+      ? `Connected! Players: ${connectedCount}` 
+      : (isMatchmaking ? `Searching for opponent (Matchmaking)` : `Waiting for player 2...`);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -60,26 +66,46 @@ export default function MultiplayerLobby() {
         });
 
         if (allReady) {
-            clearInterval(pollInterval);
-            if (activeMapFromHost) {
-                useGameStore.getState().setSelectedLevel(activeMapFromHost);
+            if (!isSyncing) {
+                setIsSyncing(true);
+                // Oznaczamy w Playroom, że ten gracz zaczął ładować swoje zasoby
+                getMyPlayer().setState('hasLoadedAssets', true, true);
             }
-            // Fetch latest local vs remote selection (they might be stored in state slightly out of sync)
-            const myChar = getMyPlayer().getState('characterSelection');
-            const p1 = isHost ? myChar : getRemoteChar(activePlayers, myId);
-            const p2 = isHost ? getRemoteChar(activePlayers, myId) : myChar;
-            useGameStore.setState({ 
-                p1Character: p1 || localSelection, 
-                p2Character: p2 || remoteSelection 
+
+            // Sprawdzamy czy Wszyscy gracze (zarówno my jak i inni) weszli w stan hasLoadedAssets
+            let everyoneLoaded = true;
+            activePlayers.forEach(p => {
+                if (!p.getState('hasLoadedAssets')) {
+                    everyoneLoaded = false;
+                }
             });
-            setView('GAME');
+
+            if (everyoneLoaded) {
+                clearInterval(pollInterval);
+                if (activeMapFromHost) {
+                    useGameStore.getState().setSelectedLevel(activeMapFromHost);
+                }
+                // Fetch latest local vs remote selection (they might be stored in state slightly out of sync)
+                const myChar = getMyPlayer().getState('characterSelection');
+                const p1 = isHost ? myChar : getRemoteChar(activePlayers, myId);
+                const p2 = isHost ? getRemoteChar(activePlayers, myId) : myChar;
+                useGameStore.setState({ 
+                    p1Character: p1 || localSelection, 
+                    p2Character: p2 || remoteSelection 
+                });
+                
+                // Trzeba dać malutki oddech przeglądarce przed usunięciem Loader'a
+                setTimeout(() => {
+                    setView('GAME');
+                }, 500);
+            }
         }
     }, 100);
 
     return () => {
        clearInterval(pollInterval);
     };
-  }, [activePlayers, isHost, localSelection, remoteSelection]);
+  }, [activePlayers, isHost, localSelection, remoteSelection, isSyncing]);
 
   const getRemoteChar = (playersArr, myId) => {
       const p = playersArr.find(pl => pl.id !== myId);
@@ -97,12 +123,7 @@ export default function MultiplayerLobby() {
     // Zapiszmy informację globalnie u Playroom Hosta by wystartować
     getMyPlayer().setState('readyToLoadMap', { start: true, levelId: activeMap }, true);
     
-    const p1 = isHost ? localSelection : remoteSelection;
-    const p2 = isHost ? remoteSelection : localSelection;
-
-    useGameStore.getState().setSelectedLevel(activeMap);
-    useGameStore.setState({ p1Character: p1, p2Character: p2 });
-    setView('GAME');
+    // Interwał PollInterval sam wychwyci to ustawienie i włączy ekran ładowania/synchronizacji
   };
 // Nothing
 
@@ -130,6 +151,25 @@ export default function MultiplayerLobby() {
 
   const isConnected = status.includes('Connected') || status.includes('Połączono');
   const displayDots = !isConnected;
+
+  if (isSyncing) {
+    return (
+      <div className="who-win" style={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        alignItems: 'center',
+        gap: '40px'
+      }}>
+        <div style={{ fontSize: '24px', textAlign: 'center' }}>
+          <span>Synchronizing match</span>
+          <span style={{ display: 'inline-block', width: '40px', textAlign: 'left' }}>{dots}</span>
+        </div>
+        <div style={{ fontSize: '14px', color: '#ffb' }}>
+          Waiting for all players to be ready...
+        </div>
+      </div>
+    );
+  }
 
   if (!isHost && !isConnected) {
     return (
@@ -199,7 +239,7 @@ export default function MultiplayerLobby() {
         <div style={{ marginBottom: '20px' }}>
           <div 
             onClick={handleCopyId}
-            title="Click to copy url"
+            title="Click to copy url to invite a friend"
             style={{
               fontSize: '14px',
               color: '#fff',

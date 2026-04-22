@@ -2,8 +2,15 @@ import { insertCoin, onPlayerJoin as _onPlayerJoin, isHost, myPlayer, RPC } from
 
 export const initPlayroom = async (options = {}) => {
   // skipLobby jest wymagane by Playroom nie zasłaniał naszego customowego Lobby.
-  // opcjonalnie możemy przekazać roomCode by wymusić konkretny pokój.
-  await insertCoin({ streamMode: true, discord: false, skipLobby: true, ...options });
+  // Używamy streamMode: false, ponieważ w grze typu bijatyka każdy gracz patrzy na swój własny ekran (każdy walczy).
+  // streamMode: true stworzyłoby jednego hosta jako "ekran", a drugiego jako "kontroler", uniemożliwiając Matchmaking dwóch ekranów.
+  await insertCoin({ 
+      streamMode: false, 
+      discord: false, 
+      skipLobby: true, 
+      gameId: 'blood-honor-fighting-game', 
+      ...options 
+  });
 };
 
 export const onPlayerJoin = _onPlayerJoin;
