@@ -428,6 +428,11 @@ export class Fighter extends Sprite {
     this.framesCurrent = 0; // Reset klatki tylko przy faktycznej zmianie obrazka
     this.framesElapsed = 0; // Synchronizacja odtwarzania animacji
 
+    if (sprite !== 'attack' && sprite !== 'heavyAttack') {
+      this.isAttacking = false;
+      this.isHeavyAttack = false;
+    }
+
     // Przywrócenie dźwięku ataku i silnego ataku
     if (sprite === 'attack' || sprite === 'heavyAttack') {
       if (globalAudioManager) {

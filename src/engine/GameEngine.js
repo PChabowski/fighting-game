@@ -481,11 +481,14 @@ function animate() {
             }
 
             // Attacks
-            const pAttackMax = (player.sprites && player.sprites.attack && player.sprites.attack.frameMax) || player.frameMax;
-            const eAttackMax = (enemy.sprites && enemy.sprites.attack && enemy.sprites.attack.frameMax) || enemy.frameMax;
+            const pIsAttackingAnim = player.sprites && ((player.sprites.attack && player.image === player.sprites.attack.image) || (player.sprites.heavyAttack && player.image === player.sprites.heavyAttack.image));
+            const eIsAttackingAnim = enemy.sprites && ((enemy.sprites.attack && enemy.image === enemy.sprites.attack.image) || (enemy.sprites.heavyAttack && enemy.image === enemy.sprites.heavyAttack.image));
+
+            const pAttackMax = pIsAttackingAnim ? player.frameMax : ((player.sprites && player.sprites.attack && player.sprites.attack.frameMax) || player.frameMax);
+            const eAttackMax = eIsAttackingAnim ? enemy.frameMax : ((enemy.sprites && enemy.sprites.attack && enemy.sprites.attack.frameMax) || enemy.frameMax);
             
             if (rectangularCollision({ rectangle1: player, rectangle2: enemy }) &&
-                player.isAttacking && player.framesCurrent === Math.floor(pAttackMax / 2)) {
+                player.isAttacking && pIsAttackingAnim && player.framesCurrent === Math.floor(pAttackMax / 2)) {
                 player.isAttacking = false;
                 if (!isMultiplayer || isP1Local) {
                     const dmg = player.isHeavyAttack ? player.damage * 2 : player.damage;
@@ -496,7 +499,7 @@ function animate() {
             if (player.isAttacking && player.framesCurrent === pAttackMax - 1) player.isAttacking = false;
 
             if (rectangularCollision({ rectangle1: enemy, rectangle2: player }) &&
-                enemy.isAttacking && enemy.framesCurrent === Math.floor(eAttackMax / 2)) {
+                enemy.isAttacking && eIsAttackingAnim && enemy.framesCurrent === Math.floor(eAttackMax / 2)) {
                 enemy.isAttacking = false;
                 if (!isMultiplayer || isP2Local) {
                     const dmg = enemy.isHeavyAttack ? enemy.damage * 2 : enemy.damage;
