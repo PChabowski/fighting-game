@@ -1,3 +1,4 @@
+import { DynamicPlatform } from './classes/DynamicPlatform.js';
 import { Sprite } from './classes/Sprite.js';
 import { Fighter } from './classes/Fighter.js';
 import { Enemy } from './classes/Enemy.js';
@@ -169,8 +170,27 @@ function startGame(state) {
 
     // Initialize Level
     const levelId = state.selectedLevel || DEFAULT_LEVEL;
-    currentLevelConfig = LEVELS[levelId] || LEVELS[DEFAULT_LEVEL];
+    const baseConfig = LEVELS[levelId] || LEVELS[DEFAULT_LEVEL];
     
+    currentLevelConfig = { ...baseConfig };
+    if (baseConfig.platforms) {
+        currentLevelConfig.platforms = baseConfig.platforms.map(p => {
+            if (p.waypoints && p.waypoints.length > 0) {
+                return new DynamicPlatform({
+                    position: { x: p.x, y: p.y },
+                    width: p.width,
+                    height: p.height,
+                    texture: p.texture,
+                    texX: p.texX,
+                    texY: p.texY,
+                    waypoints: p.waypoints,
+                    speed: p.speed || 2
+                });
+            }
+            return { ...p }; // Plain platforms
+        });
+    }
+
     background = new Sprite({
         position: { x: 0, y: 0 },
         imageSrc: currentLevelConfig.background,
@@ -425,6 +445,8 @@ function animate() {
     // Rysowanie platform (wraz z obsługą wycinków tekstur z tła)
     if (currentLevelConfig && currentLevelConfig.platforms) {
         for (let p of currentLevelConfig.platforms) {
+            if (p.update) p.update();
+            
             if (p.texture && background && background.image && background.image.complete) {
                 const img = background.image;
                 

@@ -191,6 +191,7 @@ export class Fighter extends Sprite {
     // Platform / Gravity collisions (Sprawdzamy rzutowanie hitboxa ZANIM przesunęliśmy Y)
     let standing = false;
     let groundY = null;
+    let currentPlatform = null;
 
     if (levelConfig.platforms) {
       // Find platform immediately below
@@ -200,14 +201,19 @@ export class Fighter extends Sprite {
           this.position.x + this.width > platform.x &&
           this.position.x < platform.x + platform.width;
 
+        const pVy = platform.velocity ? platform.velocity.y : 0;
         const currentFighterBottom = this.position.y + this.height;
         const nextFighterBottom = nextY + this.height;
-        const wasAbove = currentFighterBottom <= platform.y + 0.1; // Dodajemy 0.1 margin na float err
-        const goesBelow = nextFighterBottom >= platform.y;
+
+        // Byliśmy nad platformą PRZED jej własnym ruchem Y w tej klatce
+        const wasAbove = currentFighterBottom <= (platform.y - pVy) + 2.5;
+        // W przyszłej klatce (lub gdy platforma "ucieka" w dół) nasz Y przetnie platformę
+        const goesBelow = nextFighterBottom + Math.max(0, pVy) + 2.5 >= platform.y;
 
         if (this.velocity.y >= 0 && isWithinX && wasAbove && goesBelow) {
           standing = true;
           groundY = platform.y;
+          currentPlatform = platform;
           break;
         }
       }
@@ -238,6 +244,11 @@ export class Fighter extends Sprite {
       this.velocity.y = 0;
       this.position.y = groundY - this.height;
       this.canDoubleJump = true;
+      
+      // Momentum transfer
+      if (currentPlatform && currentPlatform.velocity) {
+        this.position.x += currentPlatform.velocity.x;
+      }
     } else {
       this.velocity.y += gravity * dt;
     }
