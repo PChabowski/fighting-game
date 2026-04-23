@@ -12,15 +12,20 @@ export class Pickup extends Sprite {
         this.baseY = position.y;
         this.floatOffset = 0;
         this.floatAngle = Math.random() * Math.PI * 2;
+        this.disableFloat = false;
     }
 
     update(c) {
         if (this.collected) return;
         
         // Aktualizacja pływającego ruchu (lekki sinus)
-        this.floatAngle += 0.05;
-        this.floatOffset = Math.sin(this.floatAngle) * 5;
-        this.position.y = this.baseY + this.floatOffset;
+        if (!this.disableFloat) {
+            this.floatAngle += 0.05;
+            this.floatOffset = Math.sin(this.floatAngle) * 5;
+            this.position.y = this.baseY + this.floatOffset;
+        } else {
+            this.position.y = this.baseY;
+        }
 
         if (this.image && this.image.src && this.image.complete && this.image.naturalWidth > 0) {
             super.draw(c);
@@ -40,6 +45,14 @@ export class Pickup extends Sprite {
                 case 'STOCK':
                     c.fillStyle = '#ffaa00';
                     c.shadowColor = '#ffaa00';
+                    break;
+                case 'FLAG_A':
+                    c.fillStyle = '#2f7dff';
+                    c.shadowColor = '#2f7dff';
+                    break;
+                case 'FLAG_B':
+                    c.fillStyle = '#ff4545';
+                    c.shadowColor = '#ff4545';
                     break;
                 default:
                     c.fillStyle = '#ffffff';

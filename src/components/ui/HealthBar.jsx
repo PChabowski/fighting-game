@@ -12,6 +12,9 @@ export default function HealthBar({ playerNum }) {
   const stamina = useGameStore((state) => 
     playerNum === 1 ? state.player1Stamina : state.player2Stamina
   );
+  const carriesFlag = useGameStore((state) => 
+    playerNum === 1 ? state.player1CarriesFlag : state.player2CarriesFlag
+  );
   
   const className = playerNum === 1 ? 'player' : 'enemy';
   const barRef = useRef(null);
@@ -67,6 +70,13 @@ export default function HealthBar({ playerNum }) {
           />
         ))}
       </div>
+      {carriesFlag && (
+        <div style={{ display: 'flex', justifyContent: playerNum === 1 ? 'flex-end' : 'flex-start', padding: '0 4px' }}>
+          <div style={{ color: '#ffcc00', fontSize: '10px', textShadow: '0 0 6px rgba(255, 204, 0, 0.75)' }}>
+            FLAG
+          </div>
+        </div>
+      )}
     </div>
   );
 }

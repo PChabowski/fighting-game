@@ -5,12 +5,18 @@ import { playroomRPC } from '../../engine/utils/playroom';
 export default function WinModal() {
   const winner = useGameStore((state) => state.winner);
   const isMultiplayer = useGameStore((state) => state.isMultiplayer);
+  const matchType = useGameStore((state) => state.matchType);
+  const player1Score = useGameStore((state) => state.player1Score);
+  const player2Score = useGameStore((state) => state.player2Score);
 
   if (!winner) return null;
 
   return (
     <div className="who-win" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
       <div>{winner === 'Tie' ? 'Tie' : `${winner} Wins`}</div>
+      {matchType === 'CTF' && (
+        <div>{`Final Score ${player1Score} : ${player2Score}`}</div>
+      )}
       <button 
         className="button menu-button"
         onClick={() => {

@@ -58,13 +58,25 @@ canvas {
   background-color: #030712;
   color: white;
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
   font-size: 14px;
+  gap: 4px;
   height: 50px;
-  width: 100px;
+  min-width: 110px;
+  padding: 4px 8px;
   margin-left: 15px;
   margin-right: 15px;
+}
+
+.timer-ctf {
+  min-width: 130px;
+}
+
+.timer-score {
+  font-size: 10px;
+  color: #ffd966;
 }
 .health-bar,
 .timer {

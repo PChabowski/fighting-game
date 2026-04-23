@@ -34,6 +34,8 @@ let playroomNetworkInitialized = false;
 let remotePlayers = [];
 let pickups = [];
 let pickupSpawnsState = [];
+let ctfFlags = [];
+let currentMatchType = 'STOCK';
 
 const keys = {
   a: { pressed: false },
@@ -51,6 +53,7 @@ function tickTimer() {
         globalTimerId = setTimeout(() => {
             globalTimer--;
             store.getState().setTimer(globalTimer);
+            store.getState().setTimeRemaining(globalTimer);
             if (globalTimer === 0) {
                 endGame();
             } else {
@@ -67,17 +70,143 @@ function endGame() {
     
     let winnerMsg = 'Tie';
     const s = store.getState();
-    if (s.player1Stocks > s.player2Stocks) winnerMsg = 'Player 1';
-    else if (s.player1Stocks < s.player2Stocks) winnerMsg = 'Player 2';
-    else if (player.health > enemy.health) winnerMsg = 'Player 1';
-    else if (player.health < enemy.health) winnerMsg = 'Player 2';
+    if (s.matchType === 'CTF') {
+        if (s.player1Score > s.player2Score) winnerMsg = 'Player 1';
+        else if (s.player1Score < s.player2Score) winnerMsg = 'Player 2';
+        else if (player.health > enemy.health) winnerMsg = 'Player 1';
+        else if (player.health < enemy.health) winnerMsg = 'Player 2';
+    } else {
+        if (s.player1Stocks > s.player2Stocks) winnerMsg = 'Player 1';
+        else if (s.player1Stocks < s.player2Stocks) winnerMsg = 'Player 2';
+        else if (player.health > enemy.health) winnerMsg = 'Player 1';
+        else if (player.health < enemy.health) winnerMsg = 'Player 2';
+    }
     
     store.getState().setWinner(winnerMsg);
+}
+
+function getTeamByPlayer(playerNum) {
+    return playerNum === 1 ? 'A' : 'B';
+}
+
+function getEnemyTeam(team) {
+    return team === 'A' ? 'B' : 'A';
+}
+
+function getFlagByTeam(team) {
+    return ctfFlags.find((flag) => flag.flagTeam === team);
+}
+
+function isPlayerInOwnBase(fighter, playerNum) {
+    if (!fighter || !fighter.currentPlatform) return false;
+    if (fighter.currentPlatform.triggerType !== 'CTF_BASE') return false;
+    return fighter.currentPlatform.baseTeam === getTeamByPlayer(playerNum);
+}
+
+function isPlayerCarryingFlag(playerNum) {
+    return ctfFlags.some((flag) => flag.carriedBy === playerNum);
+}
+
+function syncStoreFlagCarrier(playerNum, isCarrier) {
+    store.getState().setFlagCarrier(playerNum, isCarrier);
+}
+
+function resetFlagToBase(flagTeam) {
+    const flag = getFlagByTeam(flagTeam);
+    if (!flag) return;
+
+    const previousCarrier = flag.carriedBy;
+    flag.carriedBy = null;
+    flag.disableFloat = false;
+    flag.position.x = flag.basePosition.x;
+    flag.position.y = flag.basePosition.y;
+    flag.baseY = flag.basePosition.y;
+
+    if (previousCarrier === 1 || previousCarrier === 2) {
+        syncStoreFlagCarrier(previousCarrier, false);
+    }
+}
+
+function assignFlagCarrier(flagTeam, playerNum) {
+    const flag = getFlagByTeam(flagTeam);
+    if (!flag) return;
+
+    if (flag.carriedBy === playerNum) return;
+    if (flag.carriedBy === 1 || flag.carriedBy === 2) {
+        syncStoreFlagCarrier(flag.carriedBy, false);
+    }
+
+    flag.carriedBy = playerNum;
+    flag.disableFloat = true;
+    syncStoreFlagCarrier(playerNum, true);
+}
+
+function dropPlayerFlag(playerNum, isMultiplayer = false) {
+    const carriedFlag = ctfFlags.find((flag) => flag.carriedBy === playerNum);
+    if (!carriedFlag) return;
+
+    resetFlagToBase(carriedFlag.flagTeam);
+    if (isMultiplayer) {
+        playroomRPC.call('ctf_flag_reset', { flagTeam: carriedFlag.flagTeam }, playroomRPC.Mode.OTHERS);
+    }
+}
+
+function tryCaptureFlagAtBase(fighter, playerNum, currentStore, isMultiplayer) {
+    if (!fighter.currentPlatform || fighter.currentPlatform.triggerType !== 'CTF_BASE') return;
+
+    const ownTeam = getTeamByPlayer(playerNum);
+    if (fighter.currentPlatform.baseTeam !== ownTeam) return;
+
+    const enemyFlagTeam = getEnemyTeam(ownTeam);
+    const enemyFlag = getFlagByTeam(enemyFlagTeam);
+    if (!enemyFlag || enemyFlag.carriedBy !== playerNum) return;
+
+    currentStore.addScore(playerNum);
+    resetFlagToBase(enemyFlagTeam);
+
+    if (isMultiplayer) {
+        const s = store.getState();
+        playroomRPC.call('ctf_score', {
+            scorer: playerNum,
+            player1Score: s.player1Score,
+            player2Score: s.player2Score,
+            capturedFlagTeam: enemyFlagTeam,
+        }, playroomRPC.Mode.OTHERS);
+    }
+}
+
+function drawFlagCarrierLabel(fighter, playerNum) {
+    if (!fighter || !isPlayerCarryingFlag(playerNum)) return;
+
+    c.save();
+    c.fillStyle = '#ffcc00';
+    c.strokeStyle = '#000000';
+    c.lineWidth = 2;
+    c.font = '11px "Press Start 2P", monospace';
+
+    const labelX = fighter.position.x + fighter.width / 2 - 32;
+    const labelY = fighter.position.y - 24;
+
+    c.strokeText('FLAG', labelX, labelY);
+    c.fillText('FLAG', labelX, labelY);
+    c.restore();
 }
 
 function handleDeathCheck(defender, playerNum) {
     if (defender.health <= 0) {
         const state = store.getState();
+
+        if (state.matchType === 'CTF') {
+            dropPlayerFlag(playerNum, state.isMultiplayer);
+            const safeX = currentLevelConfig && currentLevelConfig.startPositions
+                ? currentLevelConfig.startPositions[playerNum === 1 ? 'player' : 'enemy'].x
+                : (playerNum === 1 ? 150 : 800);
+            defender.respawn(safeX, -150);
+            state.updateHealth(playerNum, 100);
+            state.updateStamina(playerNum, 100);
+            return;
+        }
+
         const pStocks = playerNum === 1 ? state.player1Stocks : state.player2Stocks;
         
         if (pStocks > 1) {
@@ -115,12 +244,31 @@ function applyPickup(fighter, playerNum, type, currentStore) {
 }
 
 function canCollectPickup(fighter, playerNum, type, currentStore) {
+    if (type === 'STOCK' && currentStore.matchType === 'CTF') return false;
     if (type === 'HEAL') return fighter.health < 100;
     if (type === 'STAMINA') return fighter.stamina < 100;
     if (type === 'STOCK') {
         const currentStocks = playerNum === 1 ? currentStore.player1Stocks : currentStore.player2Stocks;
         return currentStocks < 3;
     }
+    return true;
+}
+
+function fighterTouchesObject(fighter, object) {
+    return (
+        fighter.position.x + fighter.width >= object.position.x &&
+        fighter.position.x <= object.position.x + object.width &&
+        fighter.position.y + fighter.height >= object.position.y &&
+        fighter.position.y <= object.position.y + object.height
+    );
+}
+
+function canPickupFlag(fighter, playerNum, pickup) {
+    if (!pickup.isFlag || pickup.carriedBy) return false;
+    const ownTeam = getTeamByPlayer(playerNum);
+    if (pickup.flagTeam === ownTeam) return false;
+    if (isPlayerInOwnBase(fighter, playerNum)) return false;
+    if (isPlayerCarryingFlag(playerNum)) return false;
     return true;
 }
 
@@ -131,7 +279,9 @@ function updatePickupSpawns(isMultiplayer, isHost) {
     pickupSpawnsState.forEach(spawn => {
         if (!spawn.active && now >= spawn.nextSpawnTime) {
             spawn.active = true;
-            const types = ['HEAL', 'STAMINA', 'STOCK'];
+            const types = store.getState().matchType === 'CTF'
+                ? ['HEAL', 'STAMINA']
+                : ['HEAL', 'STAMINA', 'STOCK'];
             const randomType = types[Math.floor(Math.random() * types.length)];
             
             const p = new Pickup({ position: { x: spawn.x, y: spawn.y }, type: randomType });
@@ -154,7 +304,7 @@ function markPickupConsumed(spawnId) {
     }
 }
 
-function handleTriggers(fighter, playerNum, currentStore) {
+function handleTriggers(fighter, playerNum, currentStore, isMultiplayer) {
     if (fighter.currentPlatform && fighter.currentPlatform.isTrigger) {
         if (!fighter.triggerTimer) fighter.triggerTimer = 0;
         
@@ -168,6 +318,9 @@ function handleTriggers(fighter, playerNum, currentStore) {
         const reqFrames = fighter.currentPlatform.triggerRequiredFrames || 60;
         
         if (fighter.triggerTimer % reqFrames === 0) {
+            if (currentStore.getState().matchType === 'CTF' && fighter.currentPlatform.triggerType === 'CTF_BASE') {
+                tryCaptureFlagAtBase(fighter, playerNum, currentStore.getState(), isMultiplayer);
+            }
             if (typeof fighter.currentPlatform.onStep === 'function') {
                 fighter.currentPlatform.onStep(fighter, playerNum, currentStore);
             }
@@ -215,6 +368,8 @@ export function initGameEngine(canvasElement, useGameStore) {
             if (globalTimerId) clearTimeout(globalTimerId);
             if (networkSyncId) clearInterval(networkSyncId);
             currentLevelConfig = null;
+            ctfFlags = [];
+            currentMatchType = 'STOCK';
             camera = { x: 0, y: 0, zoom: 1.0 };
             background.image.src = '/assets/images/background.png'.replace(/^\.\/img\//, '../assets/images/');
             if (shop) {
@@ -241,19 +396,25 @@ function handleResize() {
 
 function startGame(state) {
     isRoundOver = false;
-    globalTimer = 60;
     if (globalTimerId) clearTimeout(globalTimerId);
     if (networkSyncId) clearInterval(networkSyncId);
     
     pickups = [];
     pickupSpawnsState = [];
-
-    store.getState().resetGame();
-    store.getState().setTimer(globalTimer);
+    ctfFlags = [];
 
     // Initialize Level
     const levelId = state.selectedLevel || DEFAULT_LEVEL;
     const baseConfig = LEVELS[levelId] || LEVELS[DEFAULT_LEVEL];
+    currentMatchType = baseConfig.mode === 'CTF' ? 'CTF' : 'STOCK';
+    globalTimer = currentMatchType === 'CTF' ? (baseConfig.matchDuration || 300) : 60;
+
+    store.getState().resetGame();
+    store.getState().setMatchType(currentMatchType);
+    store.getState().setTimer(globalTimer);
+    store.getState().setTimeRemaining(globalTimer);
+    store.getState().setFlagCarrier(1, false);
+    store.getState().setFlagCarrier(2, false);
     
     currentLevelConfig = { ...baseConfig };
     if (baseConfig.platforms) {
@@ -286,6 +447,23 @@ function startGame(state) {
             const p = new Pickup({ position: { x: spawn.x, y: spawn.y }, type: spawn.defaultType || 'HEAL' });
             p.spawnId = idx;
             pickups.push(p);
+        });
+    }
+
+    if (currentMatchType === 'CTF' && currentLevelConfig.flags) {
+        currentLevelConfig.flags.forEach((flagCfg) => {
+            const flag = new Pickup({
+                position: { x: flagCfg.x, y: flagCfg.y },
+                type: `FLAG_${flagCfg.team}`,
+            });
+            flag.isFlag = true;
+            flag.flagTeam = flagCfg.team;
+            flag.basePosition = { x: flagCfg.x, y: flagCfg.y };
+            flag.carriedBy = null;
+            flag.width = 28;
+            flag.height = 36;
+            pickups.push(flag);
+            ctfFlags.push(flag);
         });
     }
 
@@ -389,6 +567,23 @@ function startGame(state) {
                     applyPickup(targetFighter, data.target, data.type, store.getState());
                     markPickupConsumed(data.spawnId);
                 }
+            });
+
+            playroomRPC.register('ctf_flag_pick', (data) => {
+                if (currentMatchType !== 'CTF') return;
+                assignFlagCarrier(data.flagTeam, data.carrier);
+            });
+
+            playroomRPC.register('ctf_flag_reset', (data) => {
+                if (currentMatchType !== 'CTF') return;
+                resetFlagToBase(data.flagTeam);
+            });
+
+            playroomRPC.register('ctf_score', (data) => {
+                if (currentMatchType !== 'CTF') return;
+                if (typeof data.player1Score === 'number') store.getState().setScore(1, data.player1Score);
+                if (typeof data.player2Score === 'number') store.getState().setScore(2, data.player2Score);
+                if (data.capturedFlagTeam) resetFlagToBase(data.capturedFlagTeam);
             });
             
             playroomRPC.register('rematch', () => {
@@ -619,25 +814,56 @@ function animate() {
         const isP1Local = !isMultiplayer || isHost;
         const isP2Local = !isMultiplayer || !isHost;
 
-        if (isP1Local) handleTriggers(player, 1, store);
-        if (isP2Local) handleTriggers(enemy, 2, store);
+        if (isP1Local) handleTriggers(player, 1, store, isMultiplayer);
+        if (isP2Local) handleTriggers(enemy, 2, store, isMultiplayer);
 
         // Pickups logic
         updatePickupSpawns(isMultiplayer, isHost);
         const currentStoreStateObj = store.getState();
         for (let i = pickups.length - 1; i >= 0; i--) {
             let p = pickups[i];
+
+            if (p.isFlag && p.carriedBy) {
+                const carrier = p.carriedBy === 1 ? player : enemy;
+                if (carrier) {
+                    p.disableFloat = true;
+                    p.position.x = carrier.position.x + (carrier.width - p.width) / 2;
+                    p.position.y = carrier.position.y - 44;
+                    p.baseY = p.position.y;
+                } else {
+                    resetFlagToBase(p.flagTeam);
+                }
+            } else if (p.isFlag) {
+                p.disableFloat = false;
+                p.baseY = p.basePosition.y;
+            }
+
             p.update(c);
             
             // Kolizja tylko w locie / w grze jeśli runda trwa.
             if (!isRoundOver) {
-                if (isP1Local && rectangularCollision({ rectangle1: player, rectangle2: p }) && canCollectPickup(player, 1, p.type, currentStoreStateObj)) {
+                if (p.isFlag) {
+                    if (isP1Local && fighterTouchesObject(player, p) && canPickupFlag(player, 1, p)) {
+                        assignFlagCarrier(p.flagTeam, 1);
+                        if (isMultiplayer) {
+                            playroomRPC.call('ctf_flag_pick', { flagTeam: p.flagTeam, carrier: 1 }, playroomRPC.Mode.OTHERS);
+                        }
+                    } else if (isP2Local && fighterTouchesObject(enemy, p) && canPickupFlag(enemy, 2, p)) {
+                        assignFlagCarrier(p.flagTeam, 2);
+                        if (isMultiplayer) {
+                            playroomRPC.call('ctf_flag_pick', { flagTeam: p.flagTeam, carrier: 2 }, playroomRPC.Mode.OTHERS);
+                        }
+                    }
+                    continue;
+                }
+
+                if (isP1Local && fighterTouchesObject(player, p) && canCollectPickup(player, 1, p.type, currentStoreStateObj)) {
                     applyPickup(player, 1, p.type, currentStoreStateObj);
                     markPickupConsumed(p.spawnId);
                     pickups.splice(i, 1);
                     if (isMultiplayer) playroomRPC.call('pickup_consumed', { spawnId: p.spawnId, index: i, type: p.type, target: 1 }, playroomRPC.Mode.OTHERS);
                     continue;
-                } else if (isP2Local && rectangularCollision({ rectangle1: enemy, rectangle2: p }) && canCollectPickup(enemy, 2, p.type, currentStoreStateObj)) {
+                } else if (isP2Local && fighterTouchesObject(enemy, p) && canCollectPickup(enemy, 2, p.type, currentStoreStateObj)) {
                     applyPickup(enemy, 2, p.type, currentStoreStateObj);
                     markPickupConsumed(p.spawnId);
                     pickups.splice(i, 1);
@@ -645,6 +871,11 @@ function animate() {
                     continue;
                 }
             }
+        }
+
+        if (currentStoreStateObj.matchType === 'CTF') {
+            drawFlagCarrierLabel(player, 1);
+            drawFlagCarrierLabel(enemy, 2);
         }
 
         // Death Zone check properly hitting health points & UI
