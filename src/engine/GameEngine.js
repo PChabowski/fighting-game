@@ -14,6 +14,7 @@ import { NetworkFighter } from './classes/NetworkFighter.js';
 import { globalAudioManager } from './classes/AudioManager.js';
 import { ROSTER } from './utils/roster.js';
 import { LEVELS, DEFAULT_LEVEL } from './scenes/index.js';
+import { trackKothZoneControl } from './utils/koth.js';
 
 let canvas;
 let c;
@@ -345,6 +346,8 @@ function markPickupConsumed(spawnId) {
 
 function handleTriggers(fighter, playerNum, currentStore, isMultiplayer) {
     if (fighter.currentPlatform && fighter.currentPlatform.isTrigger) {
+        trackKothZoneControl(fighter, playerNum, currentStore);
+
         if (!fighter.triggerTimer) fighter.triggerTimer = 0;
         
         if (fighter.lastPlatform !== fighter.currentPlatform) {

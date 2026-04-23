@@ -25,6 +25,7 @@ export const open_arena = {
         { 
             x: 2000, y: 515, width: 300, height: 45, texture: 'game-floor', texX: 500, texY: 832,
             isTrigger: true,
+            triggerType: 'KOTH_ZONE',
             triggerColor: 'rgba(50, 255, 50, 0.3)',
             triggerRequiredFrames: 60,
             onStep: (fighter, playerNum, store) => {

@@ -15,6 +15,8 @@ const useGameStore = create((set) => ({
   player2Stamina: 100,
   player1Score: 0,
   player2Score: 0,
+  player1KothControlFrames: 0,
+  player2KothControlFrames: 0,
   player1CarriesFlag: false,
   player2CarriesFlag: false,
   timer: 60,
@@ -74,6 +76,10 @@ const useGameStore = create((set) => ({
     player1Score: player === 1 ? Math.max(0, value) : state.player1Score,
     player2Score: player === 2 ? Math.max(0, value) : state.player2Score,
   })),
+  incrementKothControlFrames: (player, amount = 1) => set((state) => ({
+    player1KothControlFrames: player === 1 ? state.player1KothControlFrames + amount : state.player1KothControlFrames,
+    player2KothControlFrames: player === 2 ? state.player2KothControlFrames + amount : state.player2KothControlFrames,
+  })),
   setFlagCarrier: (player, carriesFlag) => set((state) => ({
     player1CarriesFlag: player === 1 ? !!carriesFlag : state.player1CarriesFlag,
     player2CarriesFlag: player === 2 ? !!carriesFlag : state.player2CarriesFlag,
@@ -88,6 +94,8 @@ const useGameStore = create((set) => ({
     player2Stamina: 100,
     player1Score: 0,
     player2Score: 0,
+    player1KothControlFrames: 0,
+    player2KothControlFrames: 0,
     player1CarriesFlag: false,
     player2CarriesFlag: false,
     timer: 60,
