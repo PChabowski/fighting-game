@@ -8,11 +8,11 @@ export const open_arena = {
     deathZoneY: 850,
     worldWidth: 4000,
     worldHeight: 1000,
+    showShop: false,
     startPositions: {
         player: { x: 500, y: 400 },
         enemy: { x: 3500, y: 400 }
     },
-    shopPosition: { x: 2000, y: 831 },
     platforms: [
         { x: 468, y: 821, width: 627, height: 96, texture: 'game-floor', texX: 500, texY: 832 },
         { x: 1095, y: 650, width: 250, height: 45, texture: 'game-floor', texX: 500, texY: 832, waypoints: [{ x: 1095, y: 650 }, { x: 1475, y: 650 }], speed: 3 },

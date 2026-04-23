@@ -809,14 +809,17 @@ function animate() {
     }
 
     if (shop) {
-        if (currentLevelConfig && currentLevelConfig.shopPosition && shop.image.complete) {
-            shop.position.x = currentLevelConfig.shopPosition.x;
-            shop.position.y = currentLevelConfig.shopPosition.y - (shop.image.height * shop.scale);
-        } else if (!currentLevelConfig) {
-            // fall back to default behavior for main menu
-            shop.position.x = shop.basePosition.x;
+        const shouldRenderShop = !currentLevelConfig || currentLevelConfig.showShop !== false;
+        if (shouldRenderShop) {
+            if (currentLevelConfig && currentLevelConfig.shopPosition && shop.image.complete) {
+                shop.position.x = currentLevelConfig.shopPosition.x;
+                shop.position.y = currentLevelConfig.shopPosition.y - (shop.image.height * shop.scale);
+            } else if (!currentLevelConfig) {
+                // fall back to default behavior for main menu
+                shop.position.x = shop.basePosition.x;
+            }
+            shop.update(c);
         }
-        shop.update(c);
     }
     
     // Rysowanie platform (wraz z obsługą wycinków tekstur z tła)
