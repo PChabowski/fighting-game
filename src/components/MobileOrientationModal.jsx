@@ -1,19 +1,41 @@
 import React, { useState, useEffect } from 'react';
-import { isMobile, isAndroid } from '../engine/utils/mobile';
+import { isMobile } from '../engine/utils/mobile';
 
 export default function MobileOrientationModal() {
   const [shouldShow, setShouldShow] = useState(false);
+
+  const isFullscreenActive = () => {
+    return Boolean(
+      document.fullscreenElement ||
+      document.webkitFullscreenElement ||
+      document.msFullscreenElement
+    );
+  };
+
+  const isPwaMode = () => {
+    return window.matchMedia('(display-mode: standalone)').matches ||
+      window.matchMedia('(display-mode: fullscreen)').matches ||
+      window.navigator.standalone === true;
+  };
+
+  const canRequestFullscreen = () => {
+    const root = document.documentElement;
+    return Boolean(
+      root && (
+        typeof root.requestFullscreen === 'function' ||
+        typeof root.webkitRequestFullscreen === 'function' ||
+        typeof root.msRequestFullscreen === 'function'
+      )
+    );
+  };
 
   useEffect(() => {
     if (!isMobile()) return;
 
     const syncWithDeviceState = () => {
-      const isFullscreenActive = Boolean(document.fullscreenElement);
       const isLandscape = window.innerWidth > window.innerHeight;
-      
-      const isPWA = window.matchMedia('(display-mode: standalone)').matches ||
-                    window.matchMedia('(display-mode: fullscreen)').matches ||
-                    window.navigator.standalone === true;
+      const fullscreen = isFullscreenActive();
+      const isPWA = isPwaMode();
       
       // If we are installed as PWA and in landscape, everything is fine.
       if (isPWA && isLandscape) {
@@ -21,8 +43,8 @@ export default function MobileOrientationModal() {
         return;
       }
       
-      // We show the modal if we are in portrait OR if we are on Android but NOT in fullscreen (and not a PWA in landscape)
-      if (!isLandscape || (isAndroid() && !isFullscreenActive)) {
+      // Show guidance when not in landscape or when fullscreen is not active.
+      if (!isLandscape || !fullscreen) {
         setShouldShow(true);
       } else {
         setShouldShow(false);
@@ -34,19 +56,29 @@ export default function MobileOrientationModal() {
     window.addEventListener('resize', syncWithDeviceState);
     window.addEventListener('orientationchange', syncWithDeviceState);
     document.addEventListener('fullscreenchange', syncWithDeviceState);
+    document.addEventListener('webkitfullscreenchange', syncWithDeviceState);
+    document.addEventListener('msfullscreenchange', syncWithDeviceState);
 
     return () => {
       window.removeEventListener('resize', syncWithDeviceState);
       window.removeEventListener('orientationchange', syncWithDeviceState);
       document.removeEventListener('fullscreenchange', syncWithDeviceState);
+      document.removeEventListener('webkitfullscreenchange', syncWithDeviceState);
+      document.removeEventListener('msfullscreenchange', syncWithDeviceState);
     };
   }, []);
 
   const activateFullscreenAndLandscape = async () => {
     try {
       const root = document.documentElement;
-      if (root && !document.fullscreenElement && typeof root.requestFullscreen === 'function') {
-        await root.requestFullscreen();
+      if (root && !isFullscreenActive()) {
+        if (typeof root.requestFullscreen === 'function') {
+          await root.requestFullscreen();
+        } else if (typeof root.webkitRequestFullscreen === 'function') {
+          await root.webkitRequestFullscreen();
+        } else if (typeof root.msRequestFullscreen === 'function') {
+          await root.msRequestFullscreen();
+        }
       }
       
       if (screen.orientation && typeof screen.orientation.lock === 'function') {
@@ -63,9 +95,10 @@ export default function MobileOrientationModal() {
 
   if (!shouldShow) return null;
 
-  const isPWA = window.matchMedia('(display-mode: standalone)').matches ||
-                window.matchMedia('(display-mode: fullscreen)').matches ||
-                window.navigator.standalone === true;
+  const isPWA = isPwaMode();
+  const fullscreen = isFullscreenActive();
+  const canGoFullscreen = canRequestFullscreen();
+  const shouldShowFullscreenButton = !isPWA && !fullscreen && canGoFullscreen;
 
   return (
     <div className="mobile-orientation-modal" style={{ display: 'flex' }}>
@@ -75,7 +108,7 @@ export default function MobileOrientationModal() {
           The Game Fight is designed to be played in landscape mode.
         </p>
         
-        {isAndroid() && !isPWA && (
+        {shouldShowFullscreenButton && (
           <button 
             className="button menu-button mobile-orientation-modal-button" 
             onClick={activateFullscreenAndLandscape}
@@ -83,6 +116,12 @@ export default function MobileOrientationModal() {
           >
             ACTIVATE FULLSCREEN
           </button>
+        )}
+
+        {!shouldShowFullscreenButton && !fullscreen && (
+          <p className="mobile-orientation-modal-message" style={{ marginTop: '12px', marginBottom: 0 }}>
+            Open the browser menu and switch to fullscreen mode.
+          </p>
         )}
       </div>
     </div>

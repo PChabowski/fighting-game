@@ -282,6 +282,32 @@ canvas {
   line-height: 1.5;
 }
 
+@media (max-width: 900px) and (orientation: portrait) {
+  .mobile-orientation-modal {
+    padding: 0;
+    align-items: stretch;
+    justify-content: flex-start;
+  }
+
+  .mobile-orientation-modal-panel {
+    width: 100vw;
+    max-width: none;
+    min-height: 100dvh;
+    border-left: 0;
+    border-right: 0;
+    padding: 24px 18px calc(24px + env(safe-area-inset-bottom, 0px));
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .mobile-orientation-modal .menu-button,
+  .mobile-orientation-modal-button {
+    width: 100%;
+    max-width: none;
+  }
+}
+
 .menu-button { width: 320px; text-align: center; }
 
 /* Character select styles */
