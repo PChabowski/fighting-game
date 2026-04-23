@@ -49,6 +49,8 @@ export class Fighter extends Sprite {
     this.isHeavyAttack = false;
     this.canDoubleJump = true;
     this.health = 100;
+    this.stamina = 100;
+    this.staminaRegenCooldown = 0;
     this.framesCurrent = 0;
     this.framesElapsed = 0;
     this.framesHold = 7;
@@ -78,6 +80,8 @@ export class Fighter extends Sprite {
     this.dead = false;
     this._pendingDeath = false;
     this.health = 100;
+    this.stamina = 100;
+    this.staminaRegenCooldown = 0;
     this.position = { ...startPosition };
     this.velocity = { x: 0, y: 0 };
     this.canAttack = true;
@@ -103,6 +107,8 @@ export class Fighter extends Sprite {
     this.dead = false;
     this._pendingDeath = false;
     this.health = 100;
+    this.stamina = 100;
+    this.staminaRegenCooldown = 0;
     this.position = { x: safeX, y: startY };
     this.velocity = { x: 0, y: 0 };
     this.canAttack = true;
@@ -130,6 +136,12 @@ export class Fighter extends Sprite {
   update(c, levelConfig, gravity) {
     if (this.invincibilityTimer > 0) {
       this.invincibilityTimer--;
+    }
+
+    if (this.staminaRegenCooldown > 0) {
+      this.staminaRegenCooldown--;
+    } else if (this.stamina < 100) {
+      this.stamina = Math.min(100, this.stamina + 0.3); // Regeneracja ok. 18 staminy na sekundę przy 60 FPS
     }
 
     if (this.dodgeTimer > 0 || (this.invincibilityTimer > 0 && Math.floor(this.invincibilityTimer / 10) % 2 === 0)) {
@@ -301,6 +313,8 @@ export class Fighter extends Sprite {
       dead: this.dead,
       canAttack: this.canAttack, // przesyłamy flagę cooldownu po sieci
       invincibilityTimer: this.invincibilityTimer,
+      stamina: this.stamina,
+      staminaRegenCooldown: this.staminaRegenCooldown,
     };
   }
 
@@ -325,18 +339,24 @@ export class Fighter extends Sprite {
         this.framesCurrent = data.framesCurrent;
     }
     if (typeof data.health === "number") this.health = data.health;
+    if (typeof data.stamina === "number") this.stamina = data.stamina;
+    if (typeof data.staminaRegenCooldown === "number") this.staminaRegenCooldown = data.staminaRegenCooldown;
     if (typeof data.dead === "boolean") this.dead = data.dead;
   }
 
 
   attack() {
     if (!this.canAttack || this.dead || this.isDodging) return;
+    if (this.stamina < 15) return; // Brak staminy!
 
     if (
       this.image === this.sprites.attack.image &&
       this.framesCurrent < this.sprites.attack.frameMax - 1
     )
       return;
+
+    this.stamina -= 15;
+    this.staminaRegenCooldown = 60; // 1 sekunda opóźnienia regeneracji
 
     this.framesHold = this.baseFramesHold;
     this.switchSprite("attack");
@@ -347,12 +367,16 @@ export class Fighter extends Sprite {
 
   heavyAttack() {
     if (!this.canAttack || this.dead || this.isDodging) return;
+    if (this.stamina < 40) return; // Brak staminy!
 
     if (
       (this.sprites.heavyAttack && this.image === this.sprites.heavyAttack.image && this.framesCurrent < this.sprites.heavyAttack.frameMax - 1) ||
       (!this.sprites.heavyAttack && this.image === this.sprites.attack.image && this.framesCurrent < this.sprites.attack.frameMax - 1)
     )
       return;
+
+    this.stamina -= 40;
+    this.staminaRegenCooldown = 60;
 
     this.framesHold = Math.floor(this.baseFramesHold * 2.2);
     if (this.sprites.heavyAttack) {
@@ -397,6 +421,10 @@ export class Fighter extends Sprite {
       this.dodgeCooldown > 0
     )
       return;
+      
+    if (this.stamina < 25) return; // Brak staminy!
+    this.stamina -= 25;
+    this.staminaRegenCooldown = 60; // Opóźnienie po uniku
 
     if (this.sprites.dodge) {
       this.switchSprite("dodge");

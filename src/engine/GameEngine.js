@@ -288,6 +288,9 @@ function startGame(state) {
                         if (s.enemyHealth !== enemy.health) {
                             s.updateHealth(2, enemy.health);
                         }
+                        if (typeof state.stamina === 'number' && Math.floor(s.player2Stamina) !== Math.floor(state.stamina)) {
+                            s.updateStamina(2, state.stamina);
+                        }
                         // Synchronizacja zapasowych żyć dla klienta
                         if (typeof state.stocks === 'number' && s.player2Stocks !== state.stocks) {
                             // Preferujemy ilość żyć wskazywaną przez właściciela (autora stanu)
@@ -300,6 +303,9 @@ function startGame(state) {
                         const s = store.getState();
                         if (s.playerHealth !== player.health) {
                             s.updateHealth(1, player.health);
+                        }
+                        if (typeof state.stamina === 'number' && Math.floor(s.player1Stamina) !== Math.floor(state.stamina)) {
+                            s.updateStamina(1, state.stamina);
                         }
                         // Synchronizacja zapasowych żyć dla hosta
                         if (typeof state.stocks === 'number' && s.player1Stocks !== state.stocks) {
@@ -449,6 +455,15 @@ function animate() {
     if (state && state.view === 'GAME' && player && enemy) {
         player.update(c, currentLevelConfig, GRAVITY);
         enemy.update(c, currentLevelConfig, GRAVITY);
+
+        // Sync stamina to store (throttled to integer changes for performance)
+        const currentStoreState = store.getState();
+        if (player.stamina !== undefined && Math.floor(currentStoreState.player1Stamina) !== Math.floor(player.stamina)) {
+            currentStoreState.updateStamina(1, player.stamina);
+        }
+        if (enemy.stamina !== undefined && Math.floor(currentStoreState.player2Stamina) !== Math.floor(enemy.stamina)) {
+            currentStoreState.updateStamina(2, enemy.stamina);
+        }
 
         player.stopHorizontal();
         enemy.stopHorizontal();

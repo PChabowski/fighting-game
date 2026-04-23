@@ -9,15 +9,25 @@ export default function HealthBar({ playerNum }) {
   const stocks = useGameStore((state) => 
     playerNum === 1 ? state.player1Stocks : state.player2Stocks
   );
+  const stamina = useGameStore((state) => 
+    playerNum === 1 ? state.player1Stamina : state.player2Stamina
+  );
   
   const className = playerNum === 1 ? 'player' : 'enemy';
   const barRef = useRef(null);
+  const staminaBarRef = useRef(null);
 
   useEffect(() => {
     if (barRef.current) {
       gsap.to(barRef.current, { width: `${health}%`, duration: 0.3 });
     }
   }, [health]);
+
+  useEffect(() => {
+    if (staminaBarRef.current) {
+      gsap.to(staminaBarRef.current, { width: `${stamina}%`, duration: 0.1 });
+    }
+  }, [stamina]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '400px', flex: '1', maxWidth: '400px' }}>
@@ -28,6 +38,18 @@ export default function HealthBar({ playerNum }) {
           style={{ 
             width: '100%', 
             backgroundColor: '#39b54a'
+          }} 
+        ></div>
+      </div>
+      <div className="stamina-bar" style={{ width: '100%', height: '8px', backgroundColor: '#222', display: 'flex' }}>
+        <div 
+          ref={staminaBarRef}
+          style={{ 
+            width: '100%', 
+            height: '100%', 
+            backgroundColor: '#00ccff',
+            boxShadow: '0 0 4px #00ccff',
+            marginLeft: playerNum === 1 ? 'auto' : '0'
           }} 
         ></div>
       </div>

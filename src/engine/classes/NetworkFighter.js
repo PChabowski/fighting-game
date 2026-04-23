@@ -43,6 +43,12 @@ export class NetworkFighter extends Fighter {
         this.invincibilityTimer--;
       }
 
+      if (this.staminaRegenCooldown > 0) {
+        this.staminaRegenCooldown--;
+      } else if (this.stamina < 100) {
+        this.stamina = Math.min(100, this.stamina + 0.3); // Lokalna regeneracja sieciowa
+      }
+
       // Przywrócenie półprzezroczystości gdy unik włączony lub w czasie i-frames (respawn)
       if (this.dodgeTimer > 0 || (this.invincibilityTimer > 0 && Math.floor(this.invincibilityTimer / 10) % 2 === 0)) {
         c.globalAlpha = 0.5;
@@ -193,6 +199,8 @@ export class NetworkFighter extends Fighter {
 
     // 3. Statystyki i Stany
     if (typeof data.health === "number") this.health = data.health;
+    if (typeof data.stamina === "number") this.stamina = data.stamina;
+    if (typeof data.staminaRegenCooldown === "number") this.staminaRegenCooldown = data.staminaRegenCooldown;
     if (typeof data.dead === "boolean") this.dead = data.dead;
     if (typeof data.canAttack === "boolean") this.canAttack = data.canAttack;
     if (typeof data.isAttacking === "boolean") this.isAttacking = data.isAttacking;
