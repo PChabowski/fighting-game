@@ -14,8 +14,5 @@ export const dojo = {
     shopPosition: { x: 250, y: 480 },
     platforms: [
         { x: -500, y: 480, width: 2024, height: 96, texture: 'game-floor' } // Floor texture assigned
-    ],
-    pickupSpawns: [
-        { x: 512, y: 380, defaultType: 'HEAL' }
     ]
 };

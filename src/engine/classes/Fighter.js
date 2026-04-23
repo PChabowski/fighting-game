@@ -11,6 +11,7 @@ export class Fighter extends Sprite {
     frameMax = 1,
     offset = { x: 0, y: 0 },
     damage = 5,
+    staminaCosts = null,
     sprites,
     attackBox = { offset: {}, width: undefined, height: undefined },
     colorFilter = "none",
@@ -41,6 +42,12 @@ export class Fighter extends Sprite {
       height: attackBox.height,
     };
     this.damage = damage;
+    this.staminaCosts = {
+      lightAttack: 15,
+      heavyAttack: 40,
+      dodge: 25,
+      ...(staminaCosts || {}),
+    };
     this.color = color;
     this.isAttacking = false;
     this.isDodging = false;
@@ -360,7 +367,8 @@ export class Fighter extends Sprite {
 
   attack() {
     if (!this.canAttack || this.dead || this.isDodging) return;
-    if (this.stamina < 15) return; // Brak staminy!
+    const lightAttackCost = this.staminaCosts.lightAttack;
+    if (this.stamina < lightAttackCost) return; // Brak staminy!
 
     if (
       this.image === this.sprites.attack.image &&
@@ -368,7 +376,7 @@ export class Fighter extends Sprite {
     )
       return;
 
-    this.stamina -= 15;
+    this.stamina -= lightAttackCost;
     this.staminaRegenCooldown = 60; // 1 sekunda opóźnienia regeneracji
 
     this.framesHold = this.baseFramesHold;
@@ -380,7 +388,8 @@ export class Fighter extends Sprite {
 
   heavyAttack() {
     if (!this.canAttack || this.dead || this.isDodging) return;
-    if (this.stamina < 40) return; // Brak staminy!
+    const heavyAttackCost = this.staminaCosts.heavyAttack;
+    if (this.stamina < heavyAttackCost) return; // Brak staminy!
 
     if (
       (this.sprites.heavyAttack && this.image === this.sprites.heavyAttack.image && this.framesCurrent < this.sprites.heavyAttack.frameMax - 1) ||
@@ -388,7 +397,7 @@ export class Fighter extends Sprite {
     )
       return;
 
-    this.stamina -= 40;
+    this.stamina -= heavyAttackCost;
     this.staminaRegenCooldown = 60;
 
     this.framesHold = Math.floor(this.baseFramesHold * 2.2);
@@ -435,8 +444,9 @@ export class Fighter extends Sprite {
     )
       return;
       
-    if (this.stamina < 25) return; // Brak staminy!
-    this.stamina -= 25;
+    const dodgeCost = this.staminaCosts.dodge;
+    if (this.stamina < dodgeCost) return; // Brak staminy!
+    this.stamina -= dodgeCost;
     this.staminaRegenCooldown = 60; // Opóźnienie po uniku
 
     if (this.sprites.dodge) {
