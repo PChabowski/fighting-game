@@ -12,6 +12,7 @@ export default function HealthBar({ playerNum }) {
   const stamina = useGameStore((state) => 
     playerNum === 1 ? state.player1Stamina : state.player2Stamina
   );
+  const matchType = useGameStore((state) => state.matchType);
   const carriesFlag = useGameStore((state) => 
     playerNum === 1 ? state.player1CarriesFlag : state.player2CarriesFlag
   );
@@ -56,20 +57,22 @@ export default function HealthBar({ playerNum }) {
           }} 
         ></div>
       </div>
-      <div style={{ display: 'flex', justifyContent: playerNum === 1 ? 'flex-end' : 'flex-start', gap: '4px', padding: '0 4px' }}>
-        {[...Array(stocks)].map((_, i) => (
-          <div 
-            key={i} 
-            style={{ 
-              width: '12px', 
-              height: '12px', 
-              borderRadius: '50%', 
-              backgroundColor: '#ffcc00', 
-              border: '2px solid white' 
-            }} 
-          />
-        ))}
-      </div>
+      {matchType !== 'CTF' && (
+        <div style={{ display: 'flex', justifyContent: playerNum === 1 ? 'flex-end' : 'flex-start', gap: '4px', padding: '0 4px' }}>
+          {[...Array(stocks)].map((_, i) => (
+            <div 
+              key={i} 
+              style={{ 
+                width: '12px', 
+                height: '12px', 
+                borderRadius: '50%', 
+                backgroundColor: '#ffcc00', 
+                border: '2px solid white' 
+              }} 
+            />
+          ))}
+        </div>
+      )}
       {carriesFlag && (
         <div style={{ display: 'flex', justifyContent: playerNum === 1 ? 'flex-end' : 'flex-start', padding: '0 4px' }}>
           <div style={{ color: '#ffcc00', fontSize: '10px', textShadow: '0 0 6px rgba(255, 204, 0, 0.75)' }}>
