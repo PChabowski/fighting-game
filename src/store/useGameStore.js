@@ -49,6 +49,10 @@ const useGameStore = create((set) => ({
     player1Stocks: player === 1 ? Math.max(0, state.player1Stocks - 1) : state.player1Stocks,
     player2Stocks: player === 2 ? Math.max(0, state.player2Stocks - 1) : state.player2Stocks,
   })),
+  addStock: (player) => set((state) => ({
+    player1Stocks: player === 1 ? Math.min(3, state.player1Stocks + 1) : state.player1Stocks,
+    player2Stocks: player === 2 ? Math.min(3, state.player2Stocks + 1) : state.player2Stocks,
+  })),
   setStocks: (player, stocks) => set((state) => ({
     player1Stocks: player === 1 ? Math.max(0, stocks) : state.player1Stocks,
     player2Stocks: player === 2 ? Math.max(0, stocks) : state.player2Stocks,

@@ -24,9 +24,27 @@ export const platformer_long = {
         { x: 800, y: 515, width: 300, height: 45, texture: 'game-floor', texX: 500, texY: 832 },
         { x: 1400, y: 650, width: 300, height: 45, texture: 'game-floor', texX: 500, texY: 832 },
         
-        { x: 2000, y: 515, width: 300, height: 45, texture: 'game-floor', texX: 500, texY: 832 },
+        { 
+            x: 2000, y: 515, width: 300, height: 45, texture: 'game-floor', texX: 500, texY: 832,
+            isTrigger: true,
+            triggerColor: 'rgba(50, 255, 50, 0.3)',
+            triggerRequiredFrames: 60, // 1 sekunda stania na nim aktywuje efekt
+            onStep: (fighter, playerNum, store) => {
+                if (fighter.health < 100) {
+                    fighter.health = Math.min(100, fighter.health + 20);
+                    store.getState().updateHealth(playerNum, fighter.health);
+                }
+            }
+        },
         
         { x: 3200, y: 515, width: 300, height: 45, texture: 'game-floor', texX: 500, texY: 832 },
         { x: 3600, y: 650, width: 300, height: 45, texture: 'game-floor', texX: 500, texY: 832 },
+    ],
+    pickupSpawns: [
+        { x: 280, y: 550, defaultType: 'HEAL' },
+        { x: 930, y: 415, defaultType: 'STAMINA' },
+        { x: 2130, y: 415, defaultType: 'STOCK' },
+        { x: 3330, y: 415, defaultType: 'HEAL' },
+        { x: 3730, y: 550, defaultType: 'STAMINA' },
     ]
 };

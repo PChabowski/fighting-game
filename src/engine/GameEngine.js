@@ -2,6 +2,7 @@ import { DynamicPlatform } from './classes/DynamicPlatform.js';
 import { Sprite } from './classes/Sprite.js';
 import { Fighter } from './classes/Fighter.js';
 import { Enemy } from './classes/Enemy.js';
+import { Pickup } from './classes/Pickup.js';
 import { rectangularCollision } from './utils/collision.js';
 import { handleGamepadInput } from './utils/input.js';
 import { GRAVITY } from './utils/constants.js';
@@ -31,6 +32,8 @@ let globalTimerId = null;
 let networkSyncId = null;
 let playroomNetworkInitialized = false;
 let remotePlayers = [];
+let pickups = [];
+let pickupSpawnsState = [];
 
 const keys = {
   a: { pressed: false },
@@ -96,6 +99,83 @@ function calculateHit(attacker, defender, playerNum, damageOverride = null) {
     defender.takeHit(finalDamage);
     store.getState().updateHealth(playerNum, defender.health);
     handleDeathCheck(defender, playerNum);
+}
+
+function applyPickup(fighter, playerNum, type, currentStore) {
+    if (type === 'HEAL') {
+        fighter.health = Math.min(100, fighter.health + 30);
+        currentStore.updateHealth(playerNum, fighter.health);
+    } else if (type === 'STAMINA') {
+        fighter.stamina = Math.min(100, fighter.stamina + 50);
+        currentStore.updateStamina(playerNum, fighter.stamina);
+    } else if (type === 'STOCK') {
+        if (playerNum === 1) currentStore.addStock(1);
+        else currentStore.addStock(2);
+    }
+}
+
+function canCollectPickup(fighter, playerNum, type, currentStore) {
+    if (type === 'HEAL') return fighter.health < 100;
+    if (type === 'STAMINA') return fighter.stamina < 100;
+    if (type === 'STOCK') {
+        const currentStocks = playerNum === 1 ? currentStore.player1Stocks : currentStore.player2Stocks;
+        return currentStocks < 3;
+    }
+    return true;
+}
+
+function updatePickupSpawns(isMultiplayer, isHost) {
+    if (isMultiplayer && !isHost) return; // Only host handles respawn timer and rolls
+
+    const now = Date.now();
+    pickupSpawnsState.forEach(spawn => {
+        if (!spawn.active && now >= spawn.nextSpawnTime) {
+            spawn.active = true;
+            const types = ['HEAL', 'STAMINA', 'STOCK'];
+            const randomType = types[Math.floor(Math.random() * types.length)];
+            
+            const p = new Pickup({ position: { x: spawn.x, y: spawn.y }, type: randomType });
+            p.spawnId = spawn.id;
+            pickups.push(p);
+            
+            if (isMultiplayer && isHost) {
+                playroomRPC.call('pickup_spawn', { spawnId: spawn.id, x: spawn.x, y: spawn.y, type: randomType }, playroomRPC.Mode.OTHERS);
+            }
+        }
+    });
+}
+
+function markPickupConsumed(spawnId) {
+    const sp = pickupSpawnsState.find(s => s.id === spawnId);
+    if (sp) {
+        sp.active = false;
+        // Respawn "najszybciej to minuta" -> od 60s do 90s
+        sp.nextSpawnTime = Date.now() + 60000 + Math.random() * 30000;
+    }
+}
+
+function handleTriggers(fighter, playerNum, currentStore) {
+    if (fighter.currentPlatform && fighter.currentPlatform.isTrigger) {
+        if (!fighter.triggerTimer) fighter.triggerTimer = 0;
+        
+        if (fighter.lastPlatform !== fighter.currentPlatform) {
+            fighter.triggerTimer = 0;
+        }
+
+        fighter.triggerTimer++;
+        fighter.lastPlatform = fighter.currentPlatform;
+
+        const reqFrames = fighter.currentPlatform.triggerRequiredFrames || 60;
+        
+        if (fighter.triggerTimer % reqFrames === 0) {
+            if (typeof fighter.currentPlatform.onStep === 'function') {
+                fighter.currentPlatform.onStep(fighter, playerNum, currentStore);
+            }
+        }
+    } else {
+        fighter.triggerTimer = 0;
+        fighter.lastPlatform = null;
+    }
 }
 
 export function initGameEngine(canvasElement, useGameStore) {
@@ -165,6 +245,9 @@ function startGame(state) {
     if (globalTimerId) clearTimeout(globalTimerId);
     if (networkSyncId) clearInterval(networkSyncId);
     
+    pickups = [];
+    pickupSpawnsState = [];
+
     store.getState().resetGame();
     store.getState().setTimer(globalTimer);
 
@@ -188,6 +271,21 @@ function startGame(state) {
                 });
             }
             return { ...p }; // Plain platforms
+        });
+    }
+
+    if (currentLevelConfig.pickupSpawns) {
+        currentLevelConfig.pickupSpawns.forEach((spawn, idx) => {
+            pickupSpawnsState.push({
+                id: idx,
+                x: spawn.x,
+                y: spawn.y,
+                active: true,
+                nextSpawnTime: 0
+            });
+            const p = new Pickup({ position: { x: spawn.x, y: spawn.y }, type: spawn.defaultType || 'HEAL' });
+            p.spawnId = idx;
+            pickups.push(p);
         });
     }
 
@@ -264,6 +362,32 @@ function startGame(state) {
                     enemy.takeHit(data.damage);
                     store.getState().updateHealth(2, enemy.health);
                     handleDeathCheck(enemy, 2);
+                }
+            });
+
+            playroomRPC.register('pickup_spawn', (data) => {
+                if (!isHost) {
+                    const pickup = new Pickup({
+                        position: { x: data.x, y: data.y },
+                        type: data.type,
+                    });
+                    pickup.spawnId = data.spawnId;
+                    pickups.push(pickup);
+                    
+                    const sp = pickupSpawnsState.find(s => s.id === data.spawnId);
+                    if (sp) sp.active = true;
+                }
+            });
+
+            playroomRPC.register('pickup_consumed', (data) => {
+                const pickupIndex = pickups.findIndex(p => p.spawnId === data.spawnId);
+                if (pickupIndex !== -1) {
+                    pickups.splice(pickupIndex, 1);
+                }
+                const targetFighter = data.target === 1 ? player : enemy;
+                if (targetFighter) {
+                    applyPickup(targetFighter, data.target, data.type, store.getState());
+                    markPickupConsumed(data.spawnId);
                 }
             });
             
@@ -494,6 +618,34 @@ function animate() {
         const isHost = state.isHost;
         const isP1Local = !isMultiplayer || isHost;
         const isP2Local = !isMultiplayer || !isHost;
+
+        if (isP1Local) handleTriggers(player, 1, store);
+        if (isP2Local) handleTriggers(enemy, 2, store);
+
+        // Pickups logic
+        updatePickupSpawns(isMultiplayer, isHost);
+        const currentStoreStateObj = store.getState();
+        for (let i = pickups.length - 1; i >= 0; i--) {
+            let p = pickups[i];
+            p.update(c);
+            
+            // Kolizja tylko w locie / w grze jeśli runda trwa.
+            if (!isRoundOver) {
+                if (isP1Local && rectangularCollision({ rectangle1: player, rectangle2: p }) && canCollectPickup(player, 1, p.type, currentStoreStateObj)) {
+                    applyPickup(player, 1, p.type, currentStoreStateObj);
+                    markPickupConsumed(p.spawnId);
+                    pickups.splice(i, 1);
+                    if (isMultiplayer) playroomRPC.call('pickup_consumed', { spawnId: p.spawnId, index: i, type: p.type, target: 1 }, playroomRPC.Mode.OTHERS);
+                    continue;
+                } else if (isP2Local && rectangularCollision({ rectangle1: enemy, rectangle2: p }) && canCollectPickup(enemy, 2, p.type, currentStoreStateObj)) {
+                    applyPickup(enemy, 2, p.type, currentStoreStateObj);
+                    markPickupConsumed(p.spawnId);
+                    pickups.splice(i, 1);
+                    if (isMultiplayer) playroomRPC.call('pickup_consumed', { spawnId: p.spawnId, index: i, type: p.type, target: 2 }, playroomRPC.Mode.OTHERS);
+                    continue;
+                }
+            }
+        }
 
         // Death Zone check properly hitting health points & UI
         if (!isRoundOver) {

@@ -253,6 +253,8 @@ export class Fighter extends Sprite {
       this.velocity.y += gravity * dt;
     }
 
+    this.currentPlatform = currentPlatform;
+
     // Reset flags at the end of their animations
     if (
       this.isDodging &&

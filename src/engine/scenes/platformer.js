@@ -18,5 +18,10 @@ export const platformer = {
         { x: 150, y: 650, width: 300, height: 45, texture: 'game-floor', texX: 500, texY: 832 },  // Left plat
         { x: 1400, y: 650, width: 300, height: 45, texture: 'game-floor', texX: 500, texY: 832 }, // Right plat
         { x: 850, y: 515, width: 300, height: 45, texture: 'game-floor', texX: 500, texY: 832 },  // High center
+    ],
+    pickupSpawns: [
+        { x: 280, y: 550, defaultType: 'HEAL' },
+        { x: 1530, y: 550, defaultType: 'STAMINA' },
+        { x: 990, y: 415, defaultType: 'STOCK' }
     ]
 };
