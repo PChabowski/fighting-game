@@ -13,6 +13,12 @@ export const open_arena = {
         player: { x: 500, y: 400 },
         enemy: { x: 3500, y: 400 }
     },
+    spawnZones: [
+        { id: 'player-home', x: 180, y: 280, width: 780, height: 280, spawnY: 110, players: ['player'] },
+        { id: 'player-mid', x: 1180, y: 240, width: 620, height: 260, spawnY: 90, players: ['player'] },
+        { id: 'enemy-mid', x: 2200, y: 240, width: 620, height: 260, spawnY: 90, players: ['enemy'] },
+        { id: 'enemy-home', x: 3060, y: 280, width: 780, height: 280, spawnY: 110, players: ['enemy'] }
+    ],
     platforms: [
         { x: 468, y: 821, width: 627, height: 96, texture: 'game-floor', texX: 500, texY: 832 },
         { x: 1095, y: 650, width: 250, height: 45, texture: 'game-floor', texX: 500, texY: 832, waypoints: [{ x: 1095, y: 650 }, { x: 1475, y: 650 }], speed: 3 },

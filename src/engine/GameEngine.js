@@ -285,6 +285,110 @@ function drawFlagCarrierLabel(fighter, playerNum) {
     c.restore();
 }
 
+function getDefaultRespawnPoint(playerNum) {
+    const startKey = playerNum === 1 ? 'player' : 'enemy';
+    const fallbackX = playerNum === 1 ? 150 : 800;
+    const safeX = currentLevelConfig && currentLevelConfig.startPositions
+        ? currentLevelConfig.startPositions[startKey].x
+        : fallbackX;
+
+    return { x: safeX, y: -150 };
+}
+
+function getControlledSingleplayerRespawnPoint(defender, playerNum, state) {
+    const hasSpawnZones = !!(
+        currentLevelConfig &&
+        Array.isArray(currentLevelConfig.spawnZones) &&
+        currentLevelConfig.spawnZones.length > 0
+    );
+    const isSingleplayerArcade = !state.isMultiplayer && state.gameMode === 'ARCADE';
+
+    if (!hasSpawnZones || !isSingleplayerArcade) return null;
+
+    const actorRole = playerNum === 1 ? 'player' : 'enemy';
+    const edgeMargin = 80;
+    const innerMargin = 24;
+    const defenderWidth = typeof defender?.width === 'number' ? defender.width : 50;
+    const defenderHeight = typeof defender?.height === 'number' ? defender.height : 120;
+    const worldWidth = typeof currentLevelConfig.worldWidth === 'number'
+        ? currentLevelConfig.worldWidth
+        : (canvas ? canvas.width : 1024);
+    const worldHeight = typeof currentLevelConfig.worldHeight === 'number'
+        ? currentLevelConfig.worldHeight
+        : (canvas ? canvas.height : 576);
+
+    const candidateZones = currentLevelConfig.spawnZones
+        .filter((zone) => {
+            if (!zone || typeof zone.x !== 'number' || typeof zone.width !== 'number') return false;
+            if (zone.width <= 0) return false;
+
+            if (Array.isArray(zone.players) && zone.players.length > 0) {
+                return zone.players.includes(actorRole) || zone.players.includes('both');
+            }
+
+            return true;
+        })
+        .map((zone) => {
+            const paddingX = typeof zone.paddingX === 'number' ? zone.paddingX : innerMargin;
+            const localMinX = zone.x + paddingX;
+            const localMaxX = zone.x + zone.width - paddingX - defenderWidth;
+
+            const minX = Math.max(edgeMargin, localMinX);
+            const maxX = Math.min(worldWidth - defenderWidth - edgeMargin, localMaxX);
+
+            if (!Number.isFinite(minX) || !Number.isFinite(maxX) || minX > maxX) {
+                return null;
+            }
+
+            return {
+                ...zone,
+                minX,
+                maxX,
+                centerX: zone.x + zone.width / 2,
+            };
+        })
+        .filter(Boolean);
+
+    if (!candidateZones.length) return null;
+
+    const referenceX = typeof defender?.position?.x === 'number'
+        ? defender.position.x
+        : candidateZones[0].centerX;
+
+    const chosenZone = candidateZones.reduce((best, zone) => {
+        if (!best) return zone;
+        const bestDistance = Math.abs(best.centerX - referenceX);
+        const nextDistance = Math.abs(zone.centerX - referenceX);
+        return nextDistance < bestDistance ? zone : best;
+    }, null);
+
+    if (!chosenZone) return null;
+
+    const randomX = chosenZone.minX + Math.random() * (chosenZone.maxX - chosenZone.minX);
+    let spawnX = Math.round(randomX);
+    spawnX = Math.max(0, Math.min(worldWidth - defenderWidth, spawnX));
+
+    const zoneY = typeof chosenZone.y === 'number' ? chosenZone.y : 260;
+    let spawnY = typeof chosenZone.spawnY === 'number'
+        ? chosenZone.spawnY
+        : Math.round(zoneY - Math.max(120, defenderHeight + 30));
+
+    if (typeof currentLevelConfig.deathZoneY === 'number') {
+        const maxAllowedByDeathZone = currentLevelConfig.deathZoneY - defenderHeight - 40;
+        spawnY = Math.min(spawnY, maxAllowedByDeathZone);
+    }
+
+    const minAllowedY = -Math.max(220, Math.round(worldHeight * 0.5));
+    const maxAllowedY = Math.max(-40, worldHeight - defenderHeight - 60);
+    spawnY = Math.max(minAllowedY, Math.min(maxAllowedY, Math.round(spawnY)));
+
+    return { x: spawnX, y: spawnY };
+}
+
+function getRespawnPoint(defender, playerNum, state) {
+    return getControlledSingleplayerRespawnPoint(defender, playerNum, state) || getDefaultRespawnPoint(playerNum);
+}
+
 function handleDeathCheck(defender, playerNum) {
     if (defender.health <= 0) {
         const state = store.getState();
@@ -297,10 +401,8 @@ function handleDeathCheck(defender, playerNum) {
                 forceBaseReturn: diedInDeathZone,
                 dropPosition: { x: dropX, y: dropY },
             });
-            const safeX = currentLevelConfig && currentLevelConfig.startPositions
-                ? currentLevelConfig.startPositions[playerNum === 1 ? 'player' : 'enemy'].x
-                : (playerNum === 1 ? 150 : 800);
-            defender.respawn(safeX, -150);
+            const respawnPoint = getRespawnPoint(defender, playerNum, state);
+            defender.respawn(respawnPoint.x, respawnPoint.y);
             state.updateHealth(playerNum, 100);
             state.updateStamina(playerNum, 100);
             return;
@@ -310,10 +412,8 @@ function handleDeathCheck(defender, playerNum) {
         
         if (pStocks > 1) {
             state.loseStock(playerNum);
-            const safeX = currentLevelConfig && currentLevelConfig.startPositions
-                ? currentLevelConfig.startPositions[playerNum === 1 ? 'player' : 'enemy'].x
-                : (playerNum === 1 ? 150 : 800);
-            defender.respawn(safeX, -150);
+            const respawnPoint = getRespawnPoint(defender, playerNum, state);
+            defender.respawn(respawnPoint.x, respawnPoint.y);
             state.updateHealth(playerNum, 100);
         } else {
             state.loseStock(playerNum);
