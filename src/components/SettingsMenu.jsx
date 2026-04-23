@@ -33,7 +33,13 @@ export default function SettingsMenu({ onBack }) {
       />
 
       <VolumeSlider
-        label="Music Volume"
+        label="Menu Music Volume"
+        value={audioSettings.menuMusicVolume}
+        onChange={(event) => setAudioSettings({ menuMusicVolume: Number(event.target.value) })}
+      />
+
+      <VolumeSlider
+        label="Battle Music Volume"
         value={audioSettings.musicVolume}
         onChange={(event) => setAudioSettings({ musicVolume: Number(event.target.value) })}
       />

@@ -4,6 +4,7 @@ import { create } from 'zustand';
 const AUDIO_SETTINGS_STORAGE_KEY = 'gamefight.audio.settings';
 const DEFAULT_AUDIO_SETTINGS = {
   masterVolume: 100,
+  menuMusicVolume: 10,
   musicVolume: 10,
   sfxVolume: 30,
 };
@@ -24,6 +25,7 @@ function loadAudioSettings() {
     const parsed = JSON.parse(raw);
     return {
       masterVolume: clampVolume(parsed.masterVolume, DEFAULT_AUDIO_SETTINGS.masterVolume),
+      menuMusicVolume: clampVolume(parsed.menuMusicVolume, DEFAULT_AUDIO_SETTINGS.menuMusicVolume),
       musicVolume: clampVolume(parsed.musicVolume, DEFAULT_AUDIO_SETTINGS.musicVolume),
       sfxVolume: clampVolume(parsed.sfxVolume, DEFAULT_AUDIO_SETTINGS.sfxVolume),
     };
@@ -93,6 +95,7 @@ const useGameStore = create((set) => ({
     const current = state.audioSettings || DEFAULT_AUDIO_SETTINGS;
     const next = {
       masterVolume: clampVolume(partialSettings?.masterVolume ?? current.masterVolume, current.masterVolume),
+      menuMusicVolume: clampVolume(partialSettings?.menuMusicVolume ?? current.menuMusicVolume, current.menuMusicVolume),
       musicVolume: clampVolume(partialSettings?.musicVolume ?? current.musicVolume, current.musicVolume),
       sfxVolume: clampVolume(partialSettings?.sfxVolume ?? current.sfxVolume, current.sfxVolume),
     };

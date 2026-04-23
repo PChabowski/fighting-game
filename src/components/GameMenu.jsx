@@ -1,11 +1,20 @@
 // src/components/GameMenu.jsx
-import React from 'react';
+import React, { useState } from 'react';
 import useGameStore from '../store/useGameStore';
 import { Link } from 'react-router-dom';
-// To be added: AudioManager
+import SettingsMenu from './SettingsMenu';
 
 export default function GameMenu() {
   const setView = useGameStore(state => state.setView);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  if (isSettingsOpen) {
+    return (
+      <div className="who-win" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <SettingsMenu onBack={() => setIsSettingsOpen(false)} />
+      </div>
+    );
+  }
 
   return (
     <>
@@ -38,6 +47,13 @@ export default function GameMenu() {
           }}
         >
           Multiplayer
+        </button>
+
+        <button
+          className="button menu-button"
+          onClick={() => setIsSettingsOpen(true)}
+        >
+          Settings
         </button>
 
         {/* Authors link (styled identical to other menu buttons) */}

@@ -4,6 +4,7 @@ export class AudioManager {
         this.currentTrackName = null;
         this.currentCategory = null;
         this.masterVolume = 1;
+        this.menuMusicVolume = 0.1;
         this.musicVolume = 0.1;
         this.sfxVolume = 0.3;
         
@@ -39,19 +40,28 @@ export class AudioManager {
     normalizeVolumeInput(value, fallback = 1) {
         const numeric = Number(value);
         if (!Number.isFinite(numeric)) return fallback;
-        const normalized = numeric > 1 ? numeric / 100 : numeric;
+        const normalized = (numeric > 1 || Number.isInteger(numeric)) ? numeric / 100 : numeric;
         return Math.max(0, Math.min(1, normalized));
     }
 
     applyVolumeSettings() {
-        const trackVolume = this.masterVolume * this.musicVolume;
-        for (const audio of Object.values(this.tracks)) {
-            audio.volume = trackVolume;
+        for (const [trackName, audio] of Object.entries(this.tracks)) {
+            audio.volume = this.getTrackVolume(trackName);
         }
 
-        if (this.currentTrack) {
-            this.currentTrack.volume = trackVolume;
+        if (this.currentTrack && this.currentTrackName) {
+            this.currentTrack.volume = this.getTrackVolume(this.currentTrackName);
         }
+    }
+
+    getTrackVolume(trackName) {
+        if (this.isTrackInCategory('menu', trackName)) {
+            return this.masterVolume * this.menuMusicVolume;
+        }
+        if (this.isTrackInCategory('battle', trackName)) {
+            return this.masterVolume * this.musicVolume;
+        }
+        return this.masterVolume * this.musicVolume;
     }
 
     setMasterVolume(value) {
@@ -64,13 +74,21 @@ export class AudioManager {
         this.applyVolumeSettings();
     }
 
+    setMenuMusicVolume(value) {
+        this.menuMusicVolume = this.normalizeVolumeInput(value, this.menuMusicVolume);
+        this.applyVolumeSettings();
+    }
+
     setSfxVolume(value) {
         this.sfxVolume = this.normalizeVolumeInput(value, this.sfxVolume);
     }
 
-    setVolumes({ masterVolume, musicVolume, sfxVolume } = {}) {
+    setVolumes({ masterVolume, menuMusicVolume, musicVolume, sfxVolume } = {}) {
         if (masterVolume !== undefined) {
             this.masterVolume = this.normalizeVolumeInput(masterVolume, this.masterVolume);
+        }
+        if (menuMusicVolume !== undefined) {
+            this.menuMusicVolume = this.normalizeVolumeInput(menuMusicVolume, this.menuMusicVolume);
         }
         if (musicVolume !== undefined) {
             this.musicVolume = this.normalizeVolumeInput(musicVolume, this.musicVolume);
@@ -128,7 +146,7 @@ export class AudioManager {
 
         this.currentTrack = trackToPlay;
         this.currentTrackName = trackName;
-        this.currentTrack.volume = this.masterVolume * this.musicVolume;
+        this.currentTrack.volume = this.getTrackVolume(trackName);
 
         if (seekTime !== null) {
             try {

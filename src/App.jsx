@@ -60,6 +60,7 @@ function MainViews({ needRefresh, setNeedRefresh, updateServiceWorker }) {
   useEffect(() => {
     globalAudioManager.setVolumes({
       masterVolume: audioSettings.masterVolume,
+      menuMusicVolume: audioSettings.menuMusicVolume,
       musicVolume: audioSettings.musicVolume,
       sfxVolume: audioSettings.sfxVolume,
     });
