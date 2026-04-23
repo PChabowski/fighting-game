@@ -117,6 +117,7 @@ function resetFlagToBase(flagTeam) {
 
     const previousCarrier = flag.carriedBy;
     flag.carriedBy = null;
+    flag.isDropped = false;
     flag.disableFloat = false;
     flag.position.x = flag.basePosition.x;
     flag.position.y = flag.basePosition.y;
@@ -137,17 +138,44 @@ function assignFlagCarrier(flagTeam, playerNum) {
     }
 
     flag.carriedBy = playerNum;
+    flag.isDropped = false;
     flag.disableFloat = true;
     syncStoreFlagCarrier(playerNum, true);
 }
 
-function dropPlayerFlag(playerNum, isMultiplayer = false) {
+function dropPlayerFlag(playerNum, isMultiplayer = false, options = {}) {
     const carriedFlag = ctfFlags.find((flag) => flag.carriedBy === playerNum);
     if (!carriedFlag) return;
 
-    resetFlagToBase(carriedFlag.flagTeam);
+    const forceBaseReturn = !!options.forceBaseReturn;
+    const dropPosition = options.dropPosition;
+
+    if (forceBaseReturn) {
+        resetFlagToBase(carriedFlag.flagTeam);
+        if (isMultiplayer) {
+            playroomRPC.call('ctf_flag_reset', { flagTeam: carriedFlag.flagTeam }, playroomRPC.Mode.OTHERS);
+        }
+        return;
+    }
+
+    const previousCarrier = carriedFlag.carriedBy;
+    carriedFlag.carriedBy = null;
+    carriedFlag.isDropped = true;
+    carriedFlag.disableFloat = true;
+    carriedFlag.position.x = dropPosition?.x ?? carriedFlag.position.x;
+    carriedFlag.position.y = dropPosition?.y ?? carriedFlag.position.y;
+    carriedFlag.baseY = carriedFlag.position.y;
+
+    if (previousCarrier === 1 || previousCarrier === 2) {
+        syncStoreFlagCarrier(previousCarrier, false);
+    }
+
     if (isMultiplayer) {
-        playroomRPC.call('ctf_flag_reset', { flagTeam: carriedFlag.flagTeam }, playroomRPC.Mode.OTHERS);
+        playroomRPC.call('ctf_flag_drop', {
+            flagTeam: carriedFlag.flagTeam,
+            x: carriedFlag.position.x,
+            y: carriedFlag.position.y,
+        }, playroomRPC.Mode.OTHERS);
     }
 }
 
@@ -160,6 +188,11 @@ function tryCaptureFlagAtBase(fighter, playerNum, currentStore, isMultiplayer) {
     const enemyFlagTeam = getEnemyTeam(ownTeam);
     const enemyFlag = getFlagByTeam(enemyFlagTeam);
     if (!enemyFlag || enemyFlag.carriedBy !== playerNum) return;
+
+    const ownFlag = getFlagByTeam(ownTeam);
+    if (!ownFlag) return;
+    if (ownFlag.carriedBy !== null) return;
+    if (ownFlag.isDropped) return;
 
     currentStore.addScore(playerNum);
     resetFlagToBase(enemyFlagTeam);
@@ -197,7 +230,13 @@ function handleDeathCheck(defender, playerNum) {
         const state = store.getState();
 
         if (state.matchType === 'CTF') {
-            dropPlayerFlag(playerNum, state.isMultiplayer);
+            const diedInDeathZone = !!(currentLevelConfig && typeof currentLevelConfig.deathZoneY === 'number' && defender.position.y > currentLevelConfig.deathZoneY);
+            const dropX = defender.position.x + Math.max(0, (defender.width - 28) / 2);
+            const dropY = defender.position.y - 20;
+            dropPlayerFlag(playerNum, state.isMultiplayer, {
+                forceBaseReturn: diedInDeathZone,
+                dropPosition: { x: dropX, y: dropY },
+            });
             const safeX = currentLevelConfig && currentLevelConfig.startPositions
                 ? currentLevelConfig.startPositions[playerNum === 1 ? 'player' : 'enemy'].x
                 : (playerNum === 1 ? 150 : 800);
@@ -266,7 +305,7 @@ function fighterTouchesObject(fighter, object) {
 function canPickupFlag(fighter, playerNum, pickup) {
     if (!pickup.isFlag || pickup.carriedBy) return false;
     const ownTeam = getTeamByPlayer(playerNum);
-    if (pickup.flagTeam === ownTeam) return false;
+    if (pickup.flagTeam === ownTeam) return !!pickup.isDropped;
     if (isPlayerInOwnBase(fighter, playerNum)) return false;
     if (isPlayerCarryingFlag(playerNum)) return false;
     return true;
@@ -460,6 +499,7 @@ function startGame(state) {
             flag.flagTeam = flagCfg.team;
             flag.basePosition = { x: flagCfg.x, y: flagCfg.y };
             flag.carriedBy = null;
+            flag.isDropped = false;
             flag.width = 28;
             flag.height = 36;
             pickups.push(flag);
@@ -577,6 +617,24 @@ function startGame(state) {
             playroomRPC.register('ctf_flag_reset', (data) => {
                 if (currentMatchType !== 'CTF') return;
                 resetFlagToBase(data.flagTeam);
+            });
+
+            playroomRPC.register('ctf_flag_drop', (data) => {
+                if (currentMatchType !== 'CTF') return;
+                const flag = getFlagByTeam(data.flagTeam);
+                if (!flag) return;
+
+                const previousCarrier = flag.carriedBy;
+                flag.carriedBy = null;
+                flag.isDropped = true;
+                flag.disableFloat = true;
+                flag.position.x = data.x;
+                flag.position.y = data.y;
+                flag.baseY = data.y;
+
+                if (previousCarrier === 1 || previousCarrier === 2) {
+                    syncStoreFlagCarrier(previousCarrier, false);
+                }
             });
 
             playroomRPC.register('ctf_score', (data) => {
@@ -827,6 +885,7 @@ function animate() {
                 const carrier = p.carriedBy === 1 ? player : enemy;
                 if (carrier) {
                     p.disableFloat = true;
+                    p.isDropped = false;
                     p.position.x = carrier.position.x + (carrier.width - p.width) / 2;
                     p.position.y = carrier.position.y - 44;
                     p.baseY = p.position.y;
@@ -834,8 +893,8 @@ function animate() {
                     resetFlagToBase(p.flagTeam);
                 }
             } else if (p.isFlag) {
-                p.disableFloat = false;
-                p.baseY = p.basePosition.y;
+                p.disableFloat = !!p.isDropped;
+                p.baseY = p.isDropped ? p.position.y : p.basePosition.y;
             }
 
             p.update(c);
@@ -844,14 +903,28 @@ function animate() {
             if (!isRoundOver) {
                 if (p.isFlag) {
                     if (isP1Local && fighterTouchesObject(player, p) && canPickupFlag(player, 1, p)) {
-                        assignFlagCarrier(p.flagTeam, 1);
-                        if (isMultiplayer) {
-                            playroomRPC.call('ctf_flag_pick', { flagTeam: p.flagTeam, carrier: 1 }, playroomRPC.Mode.OTHERS);
+                        if (p.flagTeam === getTeamByPlayer(1)) {
+                            resetFlagToBase(p.flagTeam);
+                            if (isMultiplayer) {
+                                playroomRPC.call('ctf_flag_reset', { flagTeam: p.flagTeam }, playroomRPC.Mode.OTHERS);
+                            }
+                        } else {
+                            assignFlagCarrier(p.flagTeam, 1);
+                            if (isMultiplayer) {
+                                playroomRPC.call('ctf_flag_pick', { flagTeam: p.flagTeam, carrier: 1 }, playroomRPC.Mode.OTHERS);
+                            }
                         }
                     } else if (isP2Local && fighterTouchesObject(enemy, p) && canPickupFlag(enemy, 2, p)) {
-                        assignFlagCarrier(p.flagTeam, 2);
-                        if (isMultiplayer) {
-                            playroomRPC.call('ctf_flag_pick', { flagTeam: p.flagTeam, carrier: 2 }, playroomRPC.Mode.OTHERS);
+                        if (p.flagTeam === getTeamByPlayer(2)) {
+                            resetFlagToBase(p.flagTeam);
+                            if (isMultiplayer) {
+                                playroomRPC.call('ctf_flag_reset', { flagTeam: p.flagTeam }, playroomRPC.Mode.OTHERS);
+                            }
+                        } else {
+                            assignFlagCarrier(p.flagTeam, 2);
+                            if (isMultiplayer) {
+                                playroomRPC.call('ctf_flag_pick', { flagTeam: p.flagTeam, carrier: 2 }, playroomRPC.Mode.OTHERS);
+                            }
                         }
                     }
                     continue;
