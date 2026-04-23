@@ -3,9 +3,13 @@ import MobileControls from './MobileControls';
 import Timer from './ui/Timer';
 import HealthBar from './ui/HealthBar';
 import WinModal from './ui/WinModal';
+import PauseMenu from './PauseMenu';
 import useGameStore from '../store/useGameStore';
 
 export default function GameInterface() {
+  const winner = useGameStore((state) => state.winner);
+  const isPaused = useGameStore((state) => state.isPaused);
+
   return (
     <>
       <div className="interface">
@@ -21,8 +25,9 @@ export default function GameInterface() {
 
       {/* Winner Message */}
       <WinModal />
+      <PauseMenu />
       {/* MobileControls render only if WinModal is not visible (winner === null) */}
-      {useGameStore.getState().winner === null && <MobileControls />}
+      {winner === null && !isPaused && <MobileControls />}
     </>
   );
 }

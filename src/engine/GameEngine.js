@@ -31,6 +31,7 @@ let isRoundOver = false;
 let globalTimer = 60;
 let globalTimerId = null;
 let networkSyncId = null;
+let musicSyncId = null;
 let playroomNetworkInitialized = false;
 let remotePlayers = [];
 let pickups = [];
@@ -50,18 +51,76 @@ const keys = {
 };
 
 function tickTimer() {
-    if (globalTimer > 0) {
-        globalTimerId = setTimeout(() => {
+    const state = store ? store.getState() : null;
+    if (!state || state.view !== 'GAME') return;
+    if (globalTimer <= 0) return;
+
+    const shouldPauseTimer = state.isPaused && !state.isMultiplayer;
+    const delay = shouldPauseTimer ? 200 : 1000;
+    globalTimerId = setTimeout(() => {
+        const currentState = store ? store.getState() : null;
+        if (!currentState || currentState.view !== 'GAME') return;
+
+        if (!(currentState.isPaused && !currentState.isMultiplayer)) {
             globalTimer--;
             store.getState().setTimer(globalTimer);
             store.getState().setTimeRemaining(globalTimer);
             if (globalTimer === 0) {
                 endGame();
-            } else {
-                tickTimer();
+                return;
             }
-        }, 1000);
+        }
+
+        tickTimer();
+    }, delay);
+}
+
+function clearMusicSyncInterval() {
+    if (musicSyncId) {
+        clearInterval(musicSyncId);
+        musicSyncId = null;
     }
+}
+
+function getBattleTrackState() {
+    const current = globalAudioManager.getCurrentTrackState();
+    if (!current.trackName || !globalAudioManager.isTrackInCategory('battle', current.trackName)) {
+        globalAudioManager.playCategory('battle');
+    }
+    return globalAudioManager.getCurrentTrackState();
+}
+
+function broadcastHostMusicState() {
+    const state = store ? store.getState() : null;
+    if (!state || state.view !== 'GAME' || !state.isMultiplayer || !state.isHost) return;
+
+    const track = getBattleTrackState();
+    if (!track.trackName) return;
+
+    playroomRPC.call('music_sync', {
+        trackName: track.trackName,
+        currentTime: track.currentTime,
+    }, playroomRPC.Mode.OTHERS);
+}
+
+function startMultiplayerMusicSync() {
+    const state = store ? store.getState() : null;
+    if (!state || !state.isMultiplayer) return;
+
+    clearMusicSyncInterval();
+
+    if (state.isHost) {
+        getBattleTrackState();
+        broadcastHostMusicState();
+        musicSyncId = setInterval(() => {
+            broadcastHostMusicState();
+        }, 2000);
+        return;
+    }
+
+    // Klient czeka na hosta, aby uniknąć losowego tracka i desynchronizacji czasu.
+    globalAudioManager.stop();
+    playroomRPC.call('music_sync_request', {}, playroomRPC.Mode.OTHERS);
 }
 
 function endGame() {
@@ -409,6 +468,8 @@ export function initGameEngine(canvasElement, useGameStore) {
             // Cleanup when leaving the game to menu/lobby
             if (globalTimerId) clearTimeout(globalTimerId);
             if (networkSyncId) clearInterval(networkSyncId);
+            clearMusicSyncInterval();
+            store.getState().setIsPaused(false);
             currentLevelConfig = null;
             ctfFlags = [];
             currentMatchType = 'STOCK';
@@ -440,6 +501,8 @@ function startGame(state) {
     isRoundOver = false;
     if (globalTimerId) clearTimeout(globalTimerId);
     if (networkSyncId) clearInterval(networkSyncId);
+    clearMusicSyncInterval();
+    store.getState().setIsPaused(false);
     
     pickups = [];
     pickupSpawnsState = [];
@@ -450,6 +513,11 @@ function startGame(state) {
     const baseConfig = LEVELS[levelId] || LEVELS[DEFAULT_LEVEL];
     currentMatchType = baseConfig.mode === 'CTF' ? 'CTF' : 'STOCK';
     globalTimer = currentMatchType === 'CTF' ? (baseConfig.matchDuration || 300) : 60;
+
+    if (!state.isMultiplayer) {
+        // Fallback dla trybów lokalnych, gdy widok nie przełącza się ponownie na GAME.
+        globalAudioManager.playCategory('battle');
+    }
 
     store.getState().resetGame();
     store.getState().setMatchType(currentMatchType);
@@ -657,6 +725,21 @@ function startGame(state) {
                 window.location.href = window.location.pathname; // czysty URL by uniknąć zapętleń Playroom 
             });
 
+            playroomRPC.register('music_sync', (data) => {
+                const currentState = store ? store.getState() : null;
+                if (!currentState || currentState.view !== 'GAME' || !currentState.isMultiplayer) return;
+                if (!data || !data.trackName) return;
+
+                const seekTime = Number.isFinite(data.currentTime) ? data.currentTime : 0;
+                globalAudioManager.play(data.trackName, { seekTime });
+            });
+
+            playroomRPC.register('music_sync_request', () => {
+                const currentState = store ? store.getState() : null;
+                if (!currentState || !currentState.isHost || currentState.view !== 'GAME') return;
+                broadcastHostMusicState();
+            });
+
             // Odbieranie synchronizacji stanu z pętli (w Playroom robimy to przez polling co klatkę)
             const myId = getMyPlayer().id;
             onPlayerJoin((p) => {
@@ -666,6 +749,8 @@ function startGame(state) {
             });
             playroomNetworkInitialized = true;
         }
+
+        startMultiplayerMusicSync();
         
         networkSyncId = setInterval(() => {
             // 1. Nadawanie stanu lokalnego fightera
@@ -737,7 +822,8 @@ function animate() {
     animationId = window.requestAnimationFrame(animate);
     
     const state = store ? store.getState() : null;
-    const isGameActive = state && state.view === 'GAME' && !isRoundOver;
+    const isPaused = !!(state && state.isPaused);
+    const shouldFreezeSimulation = !!(state && isPaused && !state.isMultiplayer);
     
     // Calculate Camera Position
     if (player && enemy && currentLevelConfig) {
@@ -828,7 +914,7 @@ function animate() {
     // Rysowanie platform (wraz z obsługą wycinków tekstur z tła)
     if (currentLevelConfig && currentLevelConfig.platforms) {
         for (let p of currentLevelConfig.platforms) {
-            if (p.update) p.update();
+            if (p.update && !shouldFreezeSimulation) p.update();
             
             if (p.texture && background && background.image && background.image.complete) {
                 const img = background.image;
@@ -856,6 +942,26 @@ function animate() {
     const overlayWidth = currentLevelConfig ? (currentLevelConfig.worldWidth || canvas.width) : canvas.width;
     const overlayHeight = currentLevelConfig ? (currentLevelConfig.worldHeight || canvas.height) : canvas.height;
     c.fillRect(0, 0, overlayWidth, overlayHeight);
+
+    if (state && state.view === 'GAME' && shouldFreezeSimulation && player && enemy) {
+        player.draw(c);
+        enemy.draw(c);
+
+        for (const pickup of pickups) {
+            pickup.update(c);
+        }
+
+        if (state.matchType === 'CTF') {
+            drawFlagCarrierLabel(player, 1);
+            drawFlagCarrierLabel(enemy, 2);
+        }
+
+        c.restore();
+        c.fillStyle = 'rgba(255, 255, 255, 0.5)';
+        c.font = '10px "Press Start 2P", monospace';
+        c.fillText('v' + (typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '2.0.0'), 10, canvas.height - 10);
+        return;
+    }
 
     if (state && state.view === 'GAME' && player && enemy) {
         player.update(c, currentLevelConfig, GRAVITY);
@@ -1086,12 +1192,31 @@ export function destroyGameEngine() {
     window.removeEventListener('keyup', handleKeyUp);
     if (globalTimerId) clearTimeout(globalTimerId);
     if (networkSyncId) clearInterval(networkSyncId);
+    clearMusicSyncInterval();
 }
 
 function handleKeyDown(event) {
+    if (event.key === 'Escape') {
+        const currentState = store ? store.getState() : null;
+        if (!currentState || currentState.view !== 'GAME' || currentState.winner) return;
+
+        const nextPaused = !currentState.isPaused;
+        currentState.setIsPaused(nextPaused);
+
+        if (nextPaused) {
+            Object.values(keys).forEach((keyState) => {
+                keyState.pressed = false;
+            });
+            if (player) player.stopHorizontal();
+            if (enemy) enemy.stopHorizontal();
+        }
+        return;
+    }
+
     if (event.repeat) return; // Zapobiega powielaniu komend przez przytrzymany klawisz (tzw. spam systemowy)
     if (!player || !enemy || isRoundOver) return;
     const state = store.getState();
+    if (state.isPaused) return;
     const isMultiplayer = state.isMultiplayer;
     const isHost = state.isHost;
 
@@ -1138,6 +1263,8 @@ function handleKeyDown(event) {
 
 function handleKeyUp(event) {
     const state = store ? store.getState() : null;
+    if (event.key === 'Escape') return;
+    if (state && state.isPaused) return;
     const isMultiplayer = state ? state.isMultiplayer : false;
     const isHost = state ? state.isHost : true;
 

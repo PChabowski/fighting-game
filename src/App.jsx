@@ -21,6 +21,8 @@ import CookieBanner from './components/CookieBanner';
 // Keep MainViews stable across App re-renders to avoid remounting GameCanvas
 function MainViews({ needRefresh, setNeedRefresh, updateServiceWorker }) {
   const view = useGameStore(state => state.view);
+  const isMultiplayer = useGameStore(state => state.isMultiplayer);
+  const audioSettings = useGameStore(state => state.audioSettings);
   const setView = useGameStore(state => state.setView);
   const setPlayroomData = useGameStore(state => state.setPlayroomData);
 
@@ -46,12 +48,22 @@ function MainViews({ needRefresh, setNeedRefresh, updateServiceWorker }) {
         globalAudioManager.playCategory('menu');
         break;
       case 'GAME':
-        globalAudioManager.playCategory('battle');
+        if (!isMultiplayer) {
+          globalAudioManager.playCategory('battle');
+        }
         break;
       default:
         globalAudioManager.stop();
     }
-  }, [view]);
+  }, [view, isMultiplayer]);
+
+  useEffect(() => {
+    globalAudioManager.setVolumes({
+      masterVolume: audioSettings.masterVolume,
+      musicVolume: audioSettings.musicVolume,
+      sfxVolume: audioSettings.sfxVolume,
+    });
+  }, [audioSettings]);
 
   return (
     <div className="conteiner">

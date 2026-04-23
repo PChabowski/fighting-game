@@ -1,6 +1,47 @@
 // src/store/useGameStore.js
 import { create } from 'zustand';
 
+const AUDIO_SETTINGS_STORAGE_KEY = 'gamefight.audio.settings';
+const DEFAULT_AUDIO_SETTINGS = {
+  masterVolume: 100,
+  musicVolume: 10,
+  sfxVolume: 30,
+};
+
+function clampVolume(value, fallback) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return fallback;
+  return Math.max(0, Math.min(100, Math.round(numeric)));
+}
+
+function loadAudioSettings() {
+  if (typeof window === 'undefined') return DEFAULT_AUDIO_SETTINGS;
+
+  try {
+    const raw = window.localStorage.getItem(AUDIO_SETTINGS_STORAGE_KEY);
+    if (!raw) return DEFAULT_AUDIO_SETTINGS;
+
+    const parsed = JSON.parse(raw);
+    return {
+      masterVolume: clampVolume(parsed.masterVolume, DEFAULT_AUDIO_SETTINGS.masterVolume),
+      musicVolume: clampVolume(parsed.musicVolume, DEFAULT_AUDIO_SETTINGS.musicVolume),
+      sfxVolume: clampVolume(parsed.sfxVolume, DEFAULT_AUDIO_SETTINGS.sfxVolume),
+    };
+  } catch (error) {
+    return DEFAULT_AUDIO_SETTINGS;
+  }
+}
+
+function saveAudioSettings(settings) {
+  if (typeof window === 'undefined') return;
+
+  try {
+    window.localStorage.setItem(AUDIO_SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+  } catch (error) {
+    // Ignore storage write errors.
+  }
+}
+
 // Ten sklep przechowuje globalny stan gry i udostępnia metody dla silnika
 const useGameStore = create((set) => ({
   // Fazy gry: 'PRELOAD', 'MENU', 'CHAR_SELECT', 'LOBBY', 'GAME'
@@ -24,6 +65,8 @@ const useGameStore = create((set) => ({
   matchType: 'STOCK', // 'STOCK' | 'CTF'
   winner: null, // np. 'Player 1', 'Player 2', 'Tie'
   gameMode: 'PVP', // 'PVP' lub 'ARCADE'
+  isPaused: false,
+  audioSettings: loadAudioSettings(),
   
   // Dane multiplayera
   isMultiplayer: false,
@@ -37,13 +80,26 @@ const useGameStore = create((set) => ({
   triggerRematch: () => set((state) => ({ rematchTrigger: state.rematchTrigger + 1 })),
 
   // Akcje do wywoływania z poziomu interfejsu React
-  setView: (newView) => set({ view: newView }),
+  setView: (newView) => set((state) => ({ view: newView, isPaused: newView === 'GAME' ? state.isPaused : false })),
   setMultiplayer: (val) => set({ isMultiplayer: val }),
   setIsMatchmaking: (val) => set({ isMatchmaking: val }),
   setGameMode: (mode) => set({ gameMode: mode }),
   setPlayroomData: (status, players) => set({ multiplayerStatus: status, playroomPlayers: players }),
   setSelectedLevel: (levelId) => set({ selectedLevel: levelId }),
   setMatchType: (type) => set({ matchType: type }),
+  setIsPaused: (paused) => set({ isPaused: !!paused }),
+  togglePause: () => set((state) => ({ isPaused: !state.isPaused })),
+  setAudioSettings: (partialSettings) => set((state) => {
+    const current = state.audioSettings || DEFAULT_AUDIO_SETTINGS;
+    const next = {
+      masterVolume: clampVolume(partialSettings?.masterVolume ?? current.masterVolume, current.masterVolume),
+      musicVolume: clampVolume(partialSettings?.musicVolume ?? current.musicVolume, current.musicVolume),
+      sfxVolume: clampVolume(partialSettings?.sfxVolume ?? current.sfxVolume, current.sfxVolume),
+    };
+
+    saveAudioSettings(next);
+    return { audioSettings: next };
+  }),
   
   // Akcje do wywoływania z poziomu silnika Canvas/JavaScript
   updateHealth: (player, hp) => set((state) => ({
@@ -101,7 +157,8 @@ const useGameStore = create((set) => ({
     timer: 60,
     timeRemaining: 300,
     matchType: 'STOCK',
-    winner: null
+    winner: null,
+    isPaused: false,
   }),
 }));
 
