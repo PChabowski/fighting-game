@@ -1,5 +1,6 @@
 import { Sprite } from "./Sprite.js";
 import { globalAudioManager } from "./AudioManager.js";
+import { DEFAULT_JUMP_POWER } from "../utils/constants.js";
 
 export class Fighter extends Sprite {
   constructor({
@@ -15,6 +16,7 @@ export class Fighter extends Sprite {
     sprites,
     attackBox = { offset: {}, width: undefined, height: undefined },
     colorFilter = "none",
+    jumpPower = DEFAULT_JUMP_POWER,
   }) {
     super({
       position,
@@ -67,6 +69,7 @@ export class Fighter extends Sprite {
     this._pendingDeath = false;
     this.canAttack = true; // Flaga blokująca spamowanie atakiem
     this.invincibilityTimer = 0; // Timer klatek nietykalności po respawnie
+    this.jumpPower = jumpPower;
 
     for (const sprite in this.sprites) {
       this.sprites[sprite].image = new Image();
@@ -191,6 +194,7 @@ export class Fighter extends Sprite {
     const dt = this.lastTime ? Math.min((now - this.lastTime) / (1000 / 60), 3) : 1;
     this.lastTime = now;
 
+    const previousX = this.position.x;
     this.position.x += this.velocity.x * dt;
     // Odejmujemy this.velocity.y ponieważ jeszcze nie dodaliśmy jej do this.position.y!
     const nextY = this.position.y + this.velocity.y * dt;
@@ -201,27 +205,38 @@ export class Fighter extends Sprite {
     let currentPlatform = null;
 
     if (levelConfig.platforms) {
-      // Find platform immediately below
+      const currentFighterBottom = this.position.y + this.height;
+      const nextFighterBottom = nextY + this.height;
+      const landingTolerance = Math.max(2.5, Math.abs(this.velocity.y * dt) * 0.2 + 1.5);
+      const footInset = Math.max(6, this.width * 0.12);
+
+      const prevFootLeft = previousX + footInset;
+      const prevFootRight = previousX + this.width - footInset;
+      const currentFootLeft = this.position.x + footInset;
+      const currentFootRight = this.position.x + this.width - footInset;
+      const sweptFootLeft = Math.min(prevFootLeft, currentFootLeft);
+      const sweptFootRight = Math.max(prevFootRight, currentFootRight);
+
+      // Find highest platform crossed this frame to avoid random misses when stepping/jumping to lower levels.
       for (let platform of levelConfig.platforms) {
-        // Szeroki hitbox na X zamist samego środka
-        const isWithinX =
-          this.position.x + this.width > platform.x &&
-          this.position.x < platform.x + platform.width;
+        const platformLeft = platform.x;
+        const platformRight = platform.x + platform.width;
+        const overlapsX = sweptFootRight > platformLeft && sweptFootLeft < platformRight;
+        if (!overlapsX) continue;
 
         const pVy = platform.velocity ? platform.velocity.y : 0;
-        const currentFighterBottom = this.position.y + this.height;
-        const nextFighterBottom = nextY + this.height;
+        const platformTopPrevFrame = platform.y - pVy;
 
-        // Byliśmy nad platformą PRZED jej własnym ruchem Y w tej klatce
-        const wasAbove = currentFighterBottom <= (platform.y - pVy) + 2.5;
-        // W przyszłej klatce (lub gdy platforma "ucieka" w dół) nasz Y przetnie platformę
-        const goesBelow = nextFighterBottom + Math.max(0, pVy) + 2.5 >= platform.y;
+        // We were above the platform top, and during this frame we crossed it while moving down.
+        const wasAbove = currentFighterBottom <= platformTopPrevFrame + landingTolerance;
+        const crossedTop = nextFighterBottom >= platform.y - landingTolerance;
 
-        if (this.velocity.y >= 0 && isWithinX && wasAbove && goesBelow) {
-          standing = true;
-          groundY = platform.y;
-          currentPlatform = platform;
-          break;
+        if (this.velocity.y >= 0 && wasAbove && crossedTop) {
+          if (!standing || platform.y < groundY) {
+            standing = true;
+            groundY = platform.y;
+            currentPlatform = platform;
+          }
         }
       }
     }
@@ -307,7 +322,7 @@ export class Fighter extends Sprite {
     this.velocity.x = 0;
   }
 
-  jump(power = 15) {
+  jump(power = this.jumpPower) {
     if (this.dead) return;
     if (this.velocity.y === 0) {
       this.velocity.y = -power;

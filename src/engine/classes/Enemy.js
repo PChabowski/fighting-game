@@ -47,10 +47,24 @@ export class Enemy extends Fighter {
         this.objectivePriorityActive = false;
         this.lastXForStuckCheck = this.position?.x || 0;
         this.stuckFrames = 0;
+        this.dynamicBoardingFrames = 0;
+        this.queuedDoubleJumpFrames = 0;
+        this.mapIntelligence = config.mapIntelligence || null;
+        this.dynamicPlatformTopology = [];
 
         // Team awareness for objective modes (CTF)
         this.team = config.team || 'B';
         this.enemyTeam = this.team === 'A' ? 'B' : 'A';
+
+        this.setMapIntelligence(this.mapIntelligence);
+    }
+
+    setMapIntelligence(mapIntelligence) {
+        this.mapIntelligence = mapIntelligence || null;
+        const dynamicPlatforms = Array.isArray(this.mapIntelligence?.dynamicPlatforms)
+            ? this.mapIntelligence.dynamicPlatforms
+            : [];
+        this.dynamicPlatformTopology = dynamicPlatforms;
     }
 
     findBestTarget(playersArray) {
@@ -72,6 +86,118 @@ export class Enemy extends Fighter {
         return closestPlayer;
     }
 
+    shouldUseAirRecovery() {
+        if (this.velocity.y <= 0) return false;
+        const isRespawnFall = this.invincibilityTimer > 0;
+        const isCtfMode = this.aiContext?.matchType === 'CTF' || this.aiContext?.mapProfile?.style === 'ctf';
+        return isRespawnFall || this.objectivePriorityActive || isCtfMode;
+    }
+
+    findBestLandingPlatform() {
+        if (!Array.isArray(this.lastPlatforms) || this.lastPlatforms.length === 0) return null;
+
+        const selfCenterX = this.position.x + this.width / 2;
+        const fighterBottomY = this.position.y + this.height;
+        let best = null;
+        let bestScore = Infinity;
+
+        for (const platform of this.lastPlatforms) {
+            if (!platform) continue;
+
+            const verticalDiff = platform.y - fighterBottomY;
+            // We only consider platforms at or below current feet position while falling.
+            if (verticalDiff < -10 || verticalDiff > 520) continue;
+
+            const leftBound = platform.x + 14;
+            const rightBound = platform.x + platform.width - 14;
+            const inside = selfCenterX >= leftBound && selfCenterX <= rightBound;
+            const centerX = platform.x + platform.width / 2;
+            const horizontalDistance = Math.abs(centerX - selfCenterX);
+
+            // Penalize narrow and edge landings so AI prefers broad, central safety.
+            const widthPenalty = platform.width < 180 ? 80 : 0;
+            const edgePenalty = inside ? 0 : Math.max(0, horizontalDistance - platform.width / 2);
+            const score = verticalDiff * 1.15 + horizontalDistance * 0.62 + widthPenalty + edgePenalty;
+
+            if (score < bestScore) {
+                bestScore = score;
+                best = platform;
+            }
+        }
+
+        return best;
+    }
+
+    performAirRecovery() {
+        if (!this.shouldUseAirRecovery()) return false;
+
+        const landing = this.findBestLandingPlatform();
+        if (!landing) {
+            // During respawn fall, avoid random horizontal drift into holes.
+            if (this.invincibilityTimer > 0) {
+                this.stopHorizontal();
+                this.switchSprite('fall');
+                return true;
+            }
+            return false;
+        }
+
+        const selfCenterX = this.position.x + this.width / 2;
+        const targetX = landing.x + landing.width / 2;
+        const deltaX = targetX - selfCenterX;
+
+        // Keep bot away from platform edges while descending.
+        const leftSafeX = landing.x + 24;
+        const rightSafeX = landing.x + landing.width - 24;
+        const overSafeZone = selfCenterX >= leftSafeX && selfCenterX <= rightSafeX;
+
+        if (!overSafeZone || Math.abs(deltaX) > 16) {
+            if (deltaX > 0) this.moveRight(3.8);
+            else this.moveLeft(3.8);
+        } else {
+            this.stopHorizontal();
+        }
+
+        this.switchSprite('fall');
+        return true;
+    }
+
+    queueTraversalDoubleJump(targetX, targetY, force = false) {
+        if (!this.canDoubleJump) return;
+
+        const selfCenterX = this.position.x + this.width / 2;
+        const fighterBottomY = this.position.y + this.height;
+        const horizontalDistance = Math.abs(targetX - selfCenterX);
+        const verticalGap = targetY - fighterBottomY;
+
+        const shouldQueue = force || horizontalDistance > 160 || verticalGap < -28;
+        if (!shouldQueue) return;
+
+        let delayFrames = 7;
+        if (horizontalDistance > 320) delayFrames = 12;
+        else if (horizontalDistance > 240) delayFrames = 10;
+        else if (horizontalDistance > 180) delayFrames = 8;
+
+        if (verticalGap < -70) delayFrames = Math.max(4, delayFrames - 2);
+        this.queuedDoubleJumpFrames = Math.max(this.queuedDoubleJumpFrames, delayFrames);
+    }
+
+    processQueuedDoubleJump() {
+        if (this.queuedDoubleJumpFrames <= 0) return;
+
+        // If grounded again, pending traversal jump is no longer needed.
+        if (this.velocity.y === 0) {
+            this.queuedDoubleJumpFrames = 0;
+            return;
+        }
+
+        this.queuedDoubleJumpFrames--;
+        if (this.queuedDoubleJumpFrames === 0 && this.canDoubleJump && !this.dead && !this.isDodging) {
+            this.jump();
+            this.switchSprite('jump');
+        }
+    }
+
     updateAI(targets, platforms = [], context = {}) {
         if (!this.aiActive || this.dead) {
             this.stopHorizontal();
@@ -85,6 +211,10 @@ export class Enemy extends Fighter {
             enemyTeam: context.enemyTeam || this.enemyTeam,
             mapProfile: context.mapProfile || this.aiMapProfile || {},
         };
+
+        if (context.mapIntelligence) {
+            this.setMapIntelligence(context.mapIntelligence);
+        }
 
         // Symulacja "puszczenia" klawisza ataku po wyjściu z trybu ataku
         if (this.fsmState !== AI_STATE.ATTACK) {
@@ -100,6 +230,8 @@ export class Enemy extends Fighter {
             this.evaluateState(targets);
         }
 
+        this.processQueuedDoubleJump();
+
         // Zawsze kieruj się w stronę celu, chyba że uciekamy 
         // (przerywa to sztuczny moonwalk – wycofywanie będzie odwracało się w swoją stronę)
         if (this.currentTarget && !this.isAttacking && this.fsmState !== AI_STATE.RETREAT) {
@@ -109,6 +241,19 @@ export class Enemy extends Fighter {
             } else if (dist < -18) {
                 this.facing = 'left';
             }
+        }
+
+        const recoveredInAir = this.performAirRecovery();
+        if (recoveredInAir) {
+            const movedX = Math.abs(this.position.x - this.lastXForStuckCheck);
+            const grounded = this.velocity.y === 0;
+            if (grounded && movedX < 0.35 && this.objectivePriorityActive && this.fsmState !== AI_STATE.ATTACK) {
+                this.stuckFrames++;
+            } else {
+                this.stuckFrames = 0;
+            }
+            this.lastXForStuckCheck = this.position.x;
+            return;
         }
 
         // Execute action every frame to keep moving (since GameEngine calls stopHorizontal each frame)
@@ -293,8 +438,8 @@ export class Enemy extends Fighter {
                 } else {
                     this.moveWithAwareness(-1, 4.5);
                 }
-                if (Math.abs(this.currentTarget.position.y - this.position.y) > 70 && this.velocity.y === 0 && Math.random() < 0.18) {
-                    this.jump();
+                if (Math.abs(this.currentTarget.position.y - this.position.y) > 70 && this.velocity.y === 0) {
+                    this.attemptVerticalAdjustment(this.currentTarget.position.y - this.position.y);
                 }
                 break;
         }
@@ -304,9 +449,11 @@ export class Enemy extends Fighter {
         if (Math.abs(distanceY) <= 80) return;
         if (distanceY < 0 && this.velocity.y === 0) {
             this.jump();
-            if (this.canDoubleJump && Math.random() < 0.5) {
-                setTimeout(() => this.jump(), 180);
-            }
+            const targetX = this.currentTarget ? this.currentTarget.position.x : this.position.x;
+            const targetY = this.currentTarget ? this.currentTarget.position.y : this.position.y;
+            const horizontalGap = Math.abs(targetX - (this.position.x + this.width / 2));
+            const forceSecondJump = distanceY < -120 || horizontalGap > 180;
+            this.queueTraversalDoubleJump(targetX, targetY, forceSecondJump);
         }
     }
 
@@ -353,8 +500,13 @@ export class Enemy extends Fighter {
         };
     }
 
-    routeObjectivePoint(rawX, rawY) {
-        const routed = this.getLaneWaypointTowards(rawX, rawY);
+    isCarryingEnemyFlag() {
+        const enemyFlag = this.findFlagByTeam(this.enemyTeam);
+        return !!(enemyFlag && enemyFlag.carriedBy === 2);
+    }
+
+    routeObjectivePoint(rawX, rawY, options = {}) {
+        const routed = this.getLaneWaypointTowards(rawX, rawY, options);
         return this.createObjectivePoint(routed.x, routed.y);
     }
 
@@ -366,14 +518,20 @@ export class Enemy extends Fighter {
             .sort((a, b) => a.x - b.x);
     }
 
-    getLaneWaypointTowards(targetX, targetY) {
+    getLaneWaypointTowards(targetX, targetY, options = {}) {
         const lane = this.getLaneNodes();
         if (!lane.length) return { x: targetX, y: targetY };
 
         const selfX = this.position.x + this.width / 2;
+        const selfY = this.position.y + this.height / 2;
         const dxToTarget = targetX - selfX;
+        const strictLane = !!options.strictLane;
 
-        if (Math.abs(dxToTarget) < 190) {
+        if (!strictLane && Math.abs(dxToTarget) < 190) {
+            return { x: targetX, y: targetY };
+        }
+
+        if (strictLane && Math.abs(dxToTarget) < 88 && Math.abs(targetY - selfY) < 120) {
             return { x: targetX, y: targetY };
         }
 
@@ -435,7 +593,7 @@ export class Enemy extends Fighter {
                 }
                 if (ownFlagDropped && ownFlag) {
                     return {
-                        target: this.routeObjectivePoint(ownFlag.position.x, ownFlag.position.y),
+                        target: this.routeObjectivePoint(ownFlag.position.x, ownFlag.position.y, { strictLane: true }),
                         closestOpponent,
                         isObjectivePriority: true,
                     };
@@ -443,12 +601,8 @@ export class Enemy extends Fighter {
             }
 
             if (ownBase) {
-                // If enemy is very close, prefer short combat over spinning around base trigger.
-                if (closestOpponent && Math.abs(closestOpponent.position.x - this.position.x) < this.pressureRange) {
-                    return { target: closestOpponent, closestOpponent, isObjectivePriority: false };
-                }
                 return {
-                    target: this.routeObjectivePoint(ownBase.x, ownBase.y),
+                    target: this.routeObjectivePoint(ownBase.x, ownBase.y, { strictLane: true }),
                     closestOpponent,
                     isObjectivePriority: true,
                 };
@@ -537,16 +691,54 @@ export class Enemy extends Fighter {
         return Math.abs(vx) > 0.05 || Math.abs(vy) > 0.05;
     }
 
+    getDynamicPlatformInfo(platform) {
+        if (!platform) return null;
+
+        const platformId = platform.platformId || platform.id;
+        if (platformId) {
+            const byId = this.dynamicPlatformTopology.find((item) => item.platformId === platformId || item.id === platformId);
+            if (byId) return byId;
+        }
+
+        // Fallback by approximate size and initial coordinates if IDs are unavailable.
+        const byApprox = this.dynamicPlatformTopology.find((item) => {
+            const similarWidth = Math.abs((item.width || 0) - (platform.width || 0)) <= 4;
+            const similarHeight = Math.abs((item.height || 0) - (platform.height || 0)) <= 4;
+            const nearX = Math.abs((item.x || 0) - (platform.x || 0)) <= 40;
+            const nearY = Math.abs((item.y || 0) - (platform.y || 0)) <= 40;
+            return similarWidth && similarHeight && nearX && nearY;
+        });
+
+        return byApprox || null;
+    }
+
+    dynamicPlatformCanReachBand(platform, direction, minY, maxY, selfCenterX) {
+        const info = this.getDynamicPlatformInfo(platform);
+        if (!info) return false;
+
+        const bounds = info.trajectoryBounds;
+        if (!bounds) return false;
+
+        const verticalOverlap = bounds.maxY >= minY && bounds.minY <= maxY;
+        if (!verticalOverlap) return false;
+
+        if (direction > 0) {
+            return bounds.maxX >= selfCenterX - 24;
+        }
+        return bounds.minX <= selfCenterX + 24;
+    }
+
     findSupportAtX(sampleX, fighterBottomY) {
         let bestSupport = null;
         let bestDelta = Infinity;
+        const allowedDrop = this.objectivePriorityActive ? Math.max(this.maxSafeDrop, 220) : this.maxSafeDrop;
 
         for (const platform of this.lastPlatforms) {
             if (!platform) continue;
             if (sampleX < platform.x || sampleX > platform.x + platform.width) continue;
 
             const deltaY = platform.y - fighterBottomY;
-            if (deltaY < -14 || deltaY > this.maxSafeDrop) continue;
+            if (deltaY < -14 || deltaY > allowedDrop) continue;
 
             const absDelta = Math.abs(deltaY);
             if (absDelta < bestDelta) {
@@ -556,6 +748,27 @@ export class Enemy extends Fighter {
         }
 
         return bestSupport;
+    }
+
+    findDismountSupport(direction, fighterBottomY, options = {}) {
+        const selfCenterX = this.position.x + this.width / 2;
+        const probeDistances = [this.width + 20, this.width + 56, this.width + 96, this.width + 138];
+
+        for (const distance of probeDistances) {
+            const sampleX = selfCenterX + direction * distance;
+            const support = this.findSupportAtX(sampleX, fighterBottomY);
+            if (!support) continue;
+            if (support === this.currentPlatform) continue;
+            if (options.requireStable && this.isMovingPlatform(support)) continue;
+            if (options.minWidth && (support.width || 0) < options.minWidth) continue;
+
+            const delta = support.y - fighterBottomY;
+            if (typeof options.maxDrop === 'number' && delta > options.maxDrop) continue;
+            if (typeof options.maxStepUp === 'number' && -delta > options.maxStepUp) continue;
+            return support;
+        }
+
+        return null;
     }
 
     scanTerrainAhead(direction) {
@@ -584,8 +797,8 @@ export class Enemy extends Fighter {
         const selfCenterX = this.position.x + this.width / 2;
         const selfBottomY = this.position.y + this.height;
         const targetBottomY = target.position.y + (target.height || this.height);
-        const minY = Math.min(selfBottomY, targetBottomY) - 140;
-        const maxY = Math.max(selfBottomY, targetBottomY) + 120;
+        const minY = Math.min(selfBottomY, targetBottomY) - 180;
+        const maxY = Math.max(selfBottomY, targetBottomY) + (this.objectivePriorityActive ? 240 : 140);
 
         const candidates = this.lastPlatforms
             .filter((platform) => this.isMovingPlatform(platform))
@@ -596,11 +809,24 @@ export class Enemy extends Fighter {
                     : platformCenterX <= selfCenterX + 20;
                 const closeEnough = Math.abs(platformCenterX - selfCenterX) <= this.visionRange + 80;
                 const inVerticalBand = platform.y >= minY && platform.y <= maxY;
-                return ahead && closeEnough && inVerticalBand;
+                const canReachBand = this.dynamicPlatformCanReachBand(platform, direction, minY, maxY, selfCenterX);
+                return ahead && closeEnough && (inVerticalBand || canReachBand);
             })
             .sort((a, b) => {
-                const da = Math.abs((a.x + a.width / 2) - selfCenterX);
-                const db = Math.abs((b.x + b.width / 2) - selfCenterX);
+                const infoA = this.getDynamicPlatformInfo(a);
+                const infoB = this.getDynamicPlatformInfo(b);
+                const centerAX = a.x + a.width / 2;
+                const centerBX = b.x + b.width / 2;
+
+                const pathAX = infoA?.trajectoryBounds
+                    ? (infoA.trajectoryBounds.minX + infoA.trajectoryBounds.maxX) / 2
+                    : centerAX;
+                const pathBX = infoB?.trajectoryBounds
+                    ? (infoB.trajectoryBounds.minX + infoB.trajectoryBounds.maxX) / 2
+                    : centerBX;
+
+                const da = Math.abs(pathAX - selfCenterX);
+                const db = Math.abs(pathBX - selfCenterX);
                 return da - db;
             });
 
@@ -610,6 +836,7 @@ export class Enemy extends Fighter {
     findJumpablePlatformCandidate(direction) {
         const selfCenterX = this.position.x + this.width / 2;
         const selfBottomY = this.position.y + this.height;
+        const carryingEnemyFlag = this.isCarryingEnemyFlag();
 
         const candidates = this.lastPlatforms
             .filter((platform) => {
@@ -618,11 +845,16 @@ export class Enemy extends Fighter {
                 const horizontalDiff = platformCenterX - selfCenterX;
                 if (direction > 0 && horizontalDiff < 24) return false;
                 if (direction < 0 && horizontalDiff > -24) return false;
-                if (Math.abs(horizontalDiff) > 360) return false;
+                const maxHorizontalDiff = carryingEnemyFlag ? 300 : 360;
+                if (Math.abs(horizontalDiff) > maxHorizontalDiff) return false;
+
+                if (carryingEnemyFlag && platform.width < 120) return false;
 
                 const verticalDiff = platform.y - selfBottomY;
                 // Reachability window for jump / drop from current platform.
-                if (verticalDiff < -220 || verticalDiff > 140) return false;
+                const minVertical = carryingEnemyFlag ? -175 : -220;
+                const maxVertical = carryingEnemyFlag ? 110 : 140;
+                if (verticalDiff < minVertical || verticalDiff > maxVertical) return false;
                 return true;
             })
             .sort((a, b) => {
@@ -637,6 +869,7 @@ export class Enemy extends Fighter {
     findLongJumpCandidate(direction) {
         const selfCenterX = this.position.x + this.width / 2;
         const selfBottomY = this.position.y + this.height;
+        const carryingEnemyFlag = this.isCarryingEnemyFlag();
 
         const candidates = this.lastPlatforms
             .filter((platform) => {
@@ -645,10 +878,15 @@ export class Enemy extends Fighter {
                 const horizontalDiff = platformCenterX - selfCenterX;
                 if (direction > 0 && horizontalDiff < 40) return false;
                 if (direction < 0 && horizontalDiff > -40) return false;
-                if (Math.abs(horizontalDiff) > 560) return false;
+                const maxHorizontalDiff = carryingEnemyFlag ? 420 : 560;
+                if (Math.abs(horizontalDiff) > maxHorizontalDiff) return false;
+
+                if (carryingEnemyFlag && platform.width < 140) return false;
 
                 const verticalDiff = platform.y - selfBottomY;
-                if (verticalDiff < -250 || verticalDiff > 360) return false;
+                const minVertical = carryingEnemyFlag ? -165 : -250;
+                const maxVertical = carryingEnemyFlag ? 210 : 360;
+                if (verticalDiff < minVertical || verticalDiff > maxVertical) return false;
                 return true;
             })
             .sort((a, b) => {
@@ -663,6 +901,7 @@ export class Enemy extends Fighter {
     findForwardLandingCandidate(direction) {
         const selfCenterX = this.position.x + this.width / 2;
         const selfBottomY = this.position.y + this.height;
+        const carryingEnemyFlag = this.isCarryingEnemyFlag();
 
         const candidates = this.lastPlatforms
             .filter((platform) => {
@@ -673,11 +912,16 @@ export class Enemy extends Fighter {
 
                 if (direction > 0 && horizontalDiff < 30) return false;
                 if (direction < 0 && horizontalDiff > -30) return false;
-                if (Math.abs(horizontalDiff) > 760) return false;
+                const maxHorizontalDiff = carryingEnemyFlag ? 620 : 760;
+                if (Math.abs(horizontalDiff) > maxHorizontalDiff) return false;
+
+                if (carryingEnemyFlag && platform.width < 150) return false;
+                if (carryingEnemyFlag && this.isMovingPlatform(platform)) return false;
 
                 const verticalDiff = platform.y - selfBottomY;
                 // Candidate for dropping / stepping off from higher platforms.
-                if (verticalDiff < 0 || verticalDiff > 380) return false;
+                const maxVerticalDrop = carryingEnemyFlag ? 220 : 380;
+                if (verticalDiff < 0 || verticalDiff > maxVerticalDrop) return false;
 
                 return true;
             })
@@ -692,6 +936,7 @@ export class Enemy extends Fighter {
 
     moveWithAwareness(direction, speed) {
         const terrain = this.scanTerrainAhead(direction);
+        const carryingEnemyFlag = this.isCarryingEnemyFlag();
 
         if (terrain.safe) {
             if (direction > 0) this.moveRight(speed);
@@ -707,26 +952,93 @@ export class Enemy extends Fighter {
             const platformCenterX = dynamicPlatform.x + dynamicPlatform.width / 2;
             const selfCenterX = this.position.x + this.width / 2;
             const deltaX = platformCenterX - selfCenterX;
+            const ridingCurrentPlatform = this.currentPlatform && this.currentPlatform === dynamicPlatform;
 
-            if (Math.abs(deltaX) > 24) {
+            if (ridingCurrentPlatform) {
+                // While riding, commit to travel direction so bot reaches an edge to dismount.
+                if (direction > 0) this.moveRight(Math.max(4.4, speed));
+                else this.moveLeft(Math.max(4.4, speed));
+                this.switchSprite('run');
+                this.dynamicBoardingFrames++;
+            } else if (Math.abs(deltaX) > 24) {
                 if (deltaX > 0) this.moveRight(Math.max(3.5, speed * 0.85));
                 else this.moveLeft(Math.max(3.5, speed * 0.85));
                 this.switchSprite('run');
+                this.dynamicBoardingFrames = 0;
             } else {
                 this.stopHorizontal();
                 this.switchSprite('idle');
+                this.dynamicBoardingFrames++;
             }
 
             const platformTopY = dynamicPlatform.y;
             const fighterBottomY = this.position.y + this.height;
-            const nearPlatform = Math.abs(platformTopY - fighterBottomY) <= this.maxSafeDrop;
+            const nearPlatform = Math.abs(platformTopY - fighterBottomY) <= this.maxSafeDrop + 28;
             const platformVx = dynamicPlatform.velocity?.x || 0;
             const movingTowardTravelDirection = Math.abs(platformVx) < 0.1 || Math.sign(platformVx) === Math.sign(direction);
+            const platformApproaching = Math.abs(platformVx) > 0.1 && (deltaX * platformVx) < 0;
+
+            // If already riding a moving platform, actively try to dismount onto stable ground in travel direction.
+            if (ridingCurrentPlatform) {
+                const dismountOptions = carryingEnemyFlag
+                    ? { requireStable: true, minWidth: 150, maxDrop: this.maxSafeDrop + 20, maxStepUp: 150 }
+                    : { maxDrop: this.maxSafeDrop + 40, maxStepUp: 180 };
+
+                const forwardSupport = this.findDismountSupport(direction, fighterBottomY, dismountOptions);
+                const backwardSupport = this.findDismountSupport(-direction, fighterBottomY, dismountOptions);
+
+                let dismountDirection = direction;
+                let landingSupport = forwardSupport;
+
+                if (!landingSupport && carryingEnemyFlag && backwardSupport) {
+                    dismountDirection = -direction;
+                    landingSupport = backwardSupport;
+                }
+
+                if (!landingSupport && !carryingEnemyFlag) {
+                    landingSupport = this.findForwardLandingCandidate(direction);
+                }
+
+                if (landingSupport && landingSupport !== dynamicPlatform) {
+                    if (dismountDirection > 0) this.moveRight(Math.max(4.6, speed));
+                    else this.moveLeft(Math.max(4.6, speed));
+                    this.switchSprite('run');
+
+                    const landingDelta = landingSupport.y - fighterBottomY;
+                    const landingCenterX = landingSupport.x + landingSupport.width / 2;
+                    const horizontalToLanding = Math.abs(landingCenterX - selfCenterX);
+                    const landingSafeEnough = !carryingEnemyFlag
+                        || (landingDelta <= this.maxSafeDrop + 20 && landingDelta >= -150 && (landingSupport.width || 0) >= 150);
+                    const shouldJumpToDismount = this.velocity.y === 0
+                        && landingSafeEnough
+                        && (landingDelta < -10 || horizontalToLanding > (carryingEnemyFlag ? 68 : 84) || this.dynamicBoardingFrames > (carryingEnemyFlag ? 12 : 22));
+
+                    if (shouldJumpToDismount) {
+                        this.jump();
+                        this.switchSprite('jump');
+                        this.queueTraversalDoubleJump(landingSupport.x + landingSupport.width / 2, landingSupport.y, true);
+                    }
+                    return;
+                }
+
+                // If carrier has no safe dismount yet, hold position on platform and wait for better timing.
+                if (carryingEnemyFlag) {
+                    this.stopHorizontal();
+                    this.switchSprite('idle');
+                    return;
+                }
+            }
 
             // Wait for a usable trajectory and jump when the moving platform is in a reachable window.
-            if (Math.abs(deltaX) < 30 && nearPlatform && this.velocity.y === 0) {
-                if (movingTowardTravelDirection || Math.random() < 0.15) {
+            if (!ridingCurrentPlatform && Math.abs(deltaX) < 42 && nearPlatform && this.velocity.y === 0) {
+                const shouldBoard = movingTowardTravelDirection || platformApproaching || this.dynamicBoardingFrames > 14;
+                if (shouldBoard) {
+                    if (direction > 0) this.moveRight(Math.max(4.2, speed));
+                    else this.moveLeft(Math.max(4.2, speed));
                     this.jump();
+                    this.switchSprite('jump');
+                    this.queueTraversalDoubleJump(platformCenterX, platformTopY, this.dynamicBoardingFrames > 20 || carryingEnemyFlag);
+                    this.dynamicBoardingFrames = 0;
                 }
             }
             return;
@@ -747,6 +1059,7 @@ export class Enemy extends Fighter {
                     if (direction > 0) this.moveRight(Math.max(4, speed));
                     else this.moveLeft(Math.max(4, speed));
                     this.switchSprite('jump');
+                    this.queueTraversalDoubleJump(jumpablePlatform.x + jumpablePlatform.width / 2, jumpablePlatform.y, true);
                 }
             }
             return;
@@ -759,7 +1072,8 @@ export class Enemy extends Fighter {
 
         // Anti-stuck recovery for objective traversal in CTF.
         if (isCtfMap && this.objectivePriorityActive) {
-            const longJumpCandidate = this.findLongJumpCandidate(direction);
+            const allowAggressiveRecovery = !carryingEnemyFlag;
+            const longJumpCandidate = allowAggressiveRecovery ? this.findLongJumpCandidate(direction) : null;
             if (longJumpCandidate) {
                 const edgeDistance = terrain.edgeDistance ?? 0;
                 const selfBottomY = this.position.y + this.height;
@@ -779,11 +1093,14 @@ export class Enemy extends Fighter {
                     return;
                 }
 
-                if (this.velocity.y === 0 && (this.stuckFrames > 18 || edgeDistance <= 26)) {
+                const canForceLongJump = this.stuckFrames > 18 || edgeDistance <= 26;
+
+                if (this.velocity.y === 0 && canForceLongJump) {
                     if (direction > 0) this.moveRight(Math.max(5, speed + 0.8));
                     else this.moveLeft(Math.max(5, speed + 0.8));
                     this.jump();
                     this.switchSprite('jump');
+                    this.queueTraversalDoubleJump(longJumpCandidate.x + longJumpCandidate.width / 2, longJumpCandidate.y, true);
                     return;
                 }
             }
@@ -802,6 +1119,13 @@ export class Enemy extends Fighter {
 
                 return;
             }
+        }
+
+        // Flag carrier should avoid endless back-and-forth near edges.
+        if (isCtfMap && carryingEnemyFlag && this.velocity.y === 0) {
+            this.stopHorizontal();
+            this.switchSprite('idle');
+            return;
         }
 
         if (!isCtfMap && terrain.edgeDistance !== null && terrain.edgeDistance < 72 && this.velocity.y === 0 && Math.random() < 0.2) {

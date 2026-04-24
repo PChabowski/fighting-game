@@ -5,7 +5,7 @@ import { Enemy } from './classes/Enemy.js';
 import { Pickup } from './classes/Pickup.js';
 import { rectangularCollision } from './utils/collision.js';
 import { handleGamepadInput } from './utils/input.js';
-import { GRAVITY } from './utils/constants.js';
+import { GRAVITY, PLAYER_JUMP_POWER } from './utils/constants.js';
 import { isMobile } from './utils/mobile.js';
 import { alignSpriteToGround } from './utils/scale.js';
 import { initResponsiveCanvas } from './utils/responsive.js';
@@ -40,6 +40,7 @@ let pickupSpawnsState = [];
 let ctfFlags = [];
 let currentMatchType = 'STOCK';
 let currentAIMapProfile = null;
+let currentMapIntelligence = null;
 
 const keys = {
   a: { pressed: false },
@@ -51,6 +52,67 @@ const keys = {
   ArrowUp: { pressed: false },
   ArrowDown: { pressed: false },
 };
+
+function buildMapIntelligence(levelId, levelConfig) {
+    if (!levelConfig) return null;
+
+    const sourcePlatforms = Array.isArray(levelConfig.platforms) ? levelConfig.platforms : [];
+    const platformTopology = sourcePlatforms.map((platform, index) => {
+        const platformId = platform.platformId || platform.id || `platform-${index}`;
+        const waypoints = Array.isArray(platform.waypoints)
+            ? platform.waypoints.map((point) => ({ x: point.x, y: point.y }))
+            : [];
+        const trajectoryPoints = [{ x: platform.x, y: platform.y }, ...waypoints];
+
+        const bounds = trajectoryPoints.reduce((acc, point) => {
+            return {
+                minX: Math.min(acc.minX, point.x),
+                maxX: Math.max(acc.maxX, point.x),
+                minY: Math.min(acc.minY, point.y),
+                maxY: Math.max(acc.maxY, point.y),
+            };
+        }, {
+            minX: platform.x,
+            maxX: platform.x,
+            minY: platform.y,
+            maxY: platform.y,
+        });
+
+        return {
+            platformId,
+            index,
+            x: platform.x,
+            y: platform.y,
+            width: platform.width,
+            height: platform.height,
+            isTrigger: !!platform.isTrigger,
+            triggerType: platform.triggerType || null,
+            baseTeam: platform.baseTeam || null,
+            isDynamic: waypoints.length > 0,
+            speed: platform.speed || 0,
+            waypoints,
+            trajectoryBounds: bounds,
+        };
+    });
+
+    return {
+        levelId,
+        worldWidth: levelConfig.worldWidth || null,
+        worldHeight: levelConfig.worldHeight || null,
+        deathZoneY: levelConfig.deathZoneY || null,
+        startPositions: levelConfig.startPositions
+            ? {
+                player: { ...levelConfig.startPositions.player },
+                enemy: { ...levelConfig.startPositions.enemy },
+            }
+            : null,
+        flags: Array.isArray(levelConfig.flags)
+            ? levelConfig.flags.map((flag) => ({ team: flag.team, x: flag.x, y: flag.y }))
+            : [],
+        platforms: platformTopology,
+        dynamicPlatforms: platformTopology.filter((platform) => platform.isDynamic),
+    };
+}
 
 function tickTimer() {
     const state = store ? store.getState() : null;
@@ -576,6 +638,7 @@ export function initGameEngine(canvasElement, useGameStore) {
             ctfFlags = [];
             currentMatchType = 'STOCK';
             currentAIMapProfile = null;
+            currentMapIntelligence = null;
             camera = { x: 0, y: 0, zoom: 1.0 };
             background.image.src = '/assets/images/background.png'.replace(/^\.\/img\//, '../assets/images/');
             if (shop) {
@@ -632,9 +695,10 @@ function startGame(state) {
     
     currentLevelConfig = { ...baseConfig };
     if (baseConfig.platforms) {
-        currentLevelConfig.platforms = baseConfig.platforms.map(p => {
+        currentLevelConfig.platforms = baseConfig.platforms.map((p, idx) => {
+            const platformId = p.id || `platform-${idx}`;
             if (p.waypoints && p.waypoints.length > 0) {
-                return new DynamicPlatform({
+                const dynamicPlatform = new DynamicPlatform({
                     position: { x: p.x, y: p.y },
                     width: p.width,
                     height: p.height,
@@ -644,10 +708,15 @@ function startGame(state) {
                     waypoints: p.waypoints,
                     speed: p.speed || 2
                 });
+                dynamicPlatform.platformId = platformId;
+                dynamicPlatform.id = platformId;
+                return dynamicPlatform;
             }
-            return { ...p }; // Plain platforms
+            return { ...p, platformId, id: platformId }; // Plain platforms
         });
     }
+
+    currentMapIntelligence = buildMapIntelligence(levelId, currentLevelConfig);
 
     if (currentLevelConfig.pickupSpawns) {
         currentLevelConfig.pickupSpawns.forEach((spawn, idx) => {
@@ -719,8 +788,8 @@ function startGame(state) {
 
     if (state.isMultiplayer) {
         const isHost = state.isHost;
-        player = new NetworkFighter(getFighterConfig(ROSTER[p1Choice], currentLevelConfig.startPositions.player, { isRemote: !isHost }));
-        enemy = new NetworkFighter(getFighterConfig(ROSTER[p2Choice], currentLevelConfig.startPositions.enemy, { isRemote: isHost, colorFilter: enemyFilterStyle }));
+        player = new NetworkFighter(getFighterConfig(ROSTER[p1Choice], currentLevelConfig.startPositions.player, { isRemote: !isHost, jumpPower: PLAYER_JUMP_POWER }));
+        enemy = new NetworkFighter(getFighterConfig(ROSTER[p2Choice], currentLevelConfig.startPositions.enemy, { isRemote: isHost, colorFilter: enemyFilterStyle, jumpPower: PLAYER_JUMP_POWER }));
         
         // Zamiast onData z PeerJS, Playroom API opiera się na RPC do eventów wysyłanych ad-hoc
         // i stanie synchronizowanym przez onPlayerJoin dla każdej klatki (na graczu).
@@ -906,7 +975,7 @@ function startGame(state) {
             });
         }, 1000 / 30);
     } else {
-        player = new Fighter(getFighterConfig(ROSTER[p1Choice], currentLevelConfig.startPositions.player));
+        player = new Fighter(getFighterConfig(ROSTER[p1Choice], currentLevelConfig.startPositions.player, { jumpPower: PLAYER_JUMP_POWER }));
         
         if (state.gameMode === 'ARCADE') {
             const difficultyCfg = getAIDifficultyConfig(state.aiDifficulty);
@@ -922,13 +991,15 @@ function startGame(state) {
                 visionRange: difficultyCfg.visionRange,
                 edgeProbeStep: difficultyCfg.edgeProbeStep,
                 maxSafeDrop: difficultyCfg.maxSafeDrop,
+                jumpPower: PLAYER_JUMP_POWER,
                 aiDifficulty: difficultyCfg.key,
                 aiMapProfile: currentAIMapProfile,
+                mapIntelligence: currentMapIntelligence,
                 colorFilter: enemyFilterStyle,
                 team: 'B',
             }));
         } else {
-            enemy = new Fighter(getFighterConfig(ROSTER[p2Choice], currentLevelConfig.startPositions.enemy, { colorFilter: enemyFilterStyle }));
+            enemy = new Fighter(getFighterConfig(ROSTER[p2Choice], currentLevelConfig.startPositions.enemy, { colorFilter: enemyFilterStyle, jumpPower: PLAYER_JUMP_POWER }));
         }
     }
 
@@ -1241,6 +1312,7 @@ function animate() {
                         levelId: currentLevelConfig.id,
                         levelMode: currentLevelConfig.mode || 'STOCK',
                         mapProfile: currentAIMapProfile,
+                        mapIntelligence: currentMapIntelligence,
                         aiDifficulty: currentStoreStateObj.aiDifficulty,
                         timeRemaining: currentStoreStateObj.timeRemaining,
                         player1CarriesFlag: currentStoreStateObj.player1CarriesFlag,
