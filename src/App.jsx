@@ -12,6 +12,7 @@ import MultiplayerMenu from './components/MultiplayerMenu';
 import MultiplayerLobby from './components/MultiplayerLobby';
 import GameInterface from './components/GameInterface';
 import MobileOrientationModal from './components/MobileOrientationModal';
+import EdgeSwipePause from './components/EdgeSwipePause';
 import UpdateModal from './components/ui/UpdateModal';
 import { Routes, Route } from 'react-router-dom';
 import Authors from './pages/Authors';
@@ -82,6 +83,7 @@ function MainViews({ needRefresh, setNeedRefresh, updateServiceWorker }) {
       {view === 'MULTI_MENU' && <MultiplayerMenu />}
       {view === 'MULTI_LOBBY' && <MultiplayerLobby />}
       {view === 'GAME' && <GameInterface />}
+      <EdgeSwipePause />
       <MobileOrientationModal />
       
       {/* Game Engine rendering layer */}
