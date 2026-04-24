@@ -33,13 +33,7 @@ export const open_arena = {
             isTrigger: true,
             triggerType: 'KOTH_ZONE',
             triggerColor: 'rgba(50, 255, 50, 0.3)',
-            triggerRequiredFrames: 60,
-            onStep: (fighter, playerNum, store) => {
-                if (fighter.health < 100) {
-                    fighter.health = Math.min(100, fighter.health + 20);
-                    store.getState().updateHealth(playerNum, fighter.health);
-                }
-            }
+            triggerRequiredFrames: 60
         },
         { x: 3200, y: 515, width: 300, height: 45, texture: 'game-floor', texX: 500, texY: 832 },
         { x: 3600, y: 650, width: 300, height: 45, texture: 'game-floor', texX: 500, texY: 832, isTrigger: true, triggerType: 'CTF_BASE', baseTeam: 'B', triggerRequiredFrames: 20 }

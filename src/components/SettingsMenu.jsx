@@ -1,5 +1,6 @@
 import React from 'react';
 import useGameStore from '../store/useGameStore';
+import { AI_DIFFICULTY_ORDER, getAIDifficultyLabel } from '../engine/utils/aiProfiles';
 
 function VolumeSlider({ label, value, onChange }) {
   return (
@@ -21,10 +22,28 @@ function VolumeSlider({ label, value, onChange }) {
 export default function SettingsMenu({ onBack }) {
   const audioSettings = useGameStore((state) => state.audioSettings);
   const setAudioSettings = useGameStore((state) => state.setAudioSettings);
+  const aiDifficulty = useGameStore((state) => state.aiDifficulty);
+  const setAiDifficulty = useGameStore((state) => state.setAiDifficulty);
 
   return (
     <div className="settings-menu">
       <div>SETTINGS</div>
+
+      <label className="settings-slider-row settings-select-row">
+        <span>AI Difficulty (Arcade)</span>
+        <select
+          value={aiDifficulty}
+          onChange={(event) => setAiDifficulty(event.target.value)}
+          className="settings-select"
+          aria-label="AI Difficulty"
+        >
+          {AI_DIFFICULTY_ORDER.map((difficulty) => (
+            <option key={difficulty} value={difficulty}>
+              {getAIDifficultyLabel(difficulty)}
+            </option>
+          ))}
+        </select>
+      </label>
 
       <VolumeSlider
         label="Master Volume"

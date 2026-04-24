@@ -15,6 +15,7 @@ import { globalAudioManager } from './classes/AudioManager.js';
 import { ROSTER } from './utils/roster.js';
 import { LEVELS, DEFAULT_LEVEL } from './scenes/index.js';
 import { trackKothZoneControl } from './utils/koth.js';
+import { getAIDifficultyConfig, getAIMapProfile } from './utils/aiProfiles.js';
 
 let canvas;
 let c;
@@ -38,6 +39,7 @@ let pickups = [];
 let pickupSpawnsState = [];
 let ctfFlags = [];
 let currentMatchType = 'STOCK';
+let currentAIMapProfile = null;
 
 const keys = {
   a: { pressed: false },
@@ -573,6 +575,7 @@ export function initGameEngine(canvasElement, useGameStore) {
             currentLevelConfig = null;
             ctfFlags = [];
             currentMatchType = 'STOCK';
+            currentAIMapProfile = null;
             camera = { x: 0, y: 0, zoom: 1.0 };
             background.image.src = '/assets/images/background.png'.replace(/^\.\/img\//, '../assets/images/');
             if (shop) {
@@ -611,6 +614,7 @@ function startGame(state) {
     // Initialize Level
     const levelId = state.selectedLevel || DEFAULT_LEVEL;
     const baseConfig = LEVELS[levelId] || LEVELS[DEFAULT_LEVEL];
+    currentAIMapProfile = getAIMapProfile(levelId, baseConfig);
     currentMatchType = baseConfig.mode === 'CTF' ? 'CTF' : 'STOCK';
     globalTimer = currentMatchType === 'CTF' ? (baseConfig.matchDuration || 300) : 60;
 
@@ -905,7 +909,24 @@ function startGame(state) {
         player = new Fighter(getFighterConfig(ROSTER[p1Choice], currentLevelConfig.startPositions.player));
         
         if (state.gameMode === 'ARCADE') {
-            enemy = new Enemy(getFighterConfig(ROSTER[p2Choice], currentLevelConfig.startPositions.enemy, { reactionTime: 20, colorFilter: enemyFilterStyle }));
+            const difficultyCfg = getAIDifficultyConfig(state.aiDifficulty);
+            enemy = new Enemy(getFighterConfig(ROSTER[p2Choice], currentLevelConfig.startPositions.enemy, {
+                reactionTime: difficultyCfg.reactionTime,
+                attackChance: difficultyCfg.attackChance,
+                heavyAttackChance: difficultyCfg.heavyAttackChance,
+                dodgeReactChance: difficultyCfg.dodgeReactChance,
+                retreatHealthThreshold: difficultyCfg.retreatHealthThreshold,
+                defensiveHealthThreshold: difficultyCfg.defensiveHealthThreshold,
+                objectiveCommitment: difficultyCfg.objectiveCommitment,
+                pressureRange: difficultyCfg.pressureRange,
+                visionRange: difficultyCfg.visionRange,
+                edgeProbeStep: difficultyCfg.edgeProbeStep,
+                maxSafeDrop: difficultyCfg.maxSafeDrop,
+                aiDifficulty: difficultyCfg.key,
+                aiMapProfile: currentAIMapProfile,
+                colorFilter: enemyFilterStyle,
+                team: 'B',
+            }));
         } else {
             enemy = new Fighter(getFighterConfig(ROSTER[p2Choice], currentLevelConfig.startPositions.enemy, { colorFilter: enemyFilterStyle }));
         }
@@ -1212,7 +1233,19 @@ function animate() {
             if (isP2Local) {
                 if (state.gameMode === 'ARCADE' && typeof enemy.updateAI === 'function') {
                     // AI controls itself
-                    enemy.updateAI([player], currentLevelConfig.platforms);
+                    enemy.updateAI([player], currentLevelConfig.platforms, {
+                        matchType: currentStoreStateObj.matchType,
+                        ctfFlags,
+                        ownTeam: 'B',
+                        enemyTeam: 'A',
+                        levelId: currentLevelConfig.id,
+                        levelMode: currentLevelConfig.mode || 'STOCK',
+                        mapProfile: currentAIMapProfile,
+                        aiDifficulty: currentStoreStateObj.aiDifficulty,
+                        timeRemaining: currentStoreStateObj.timeRemaining,
+                        player1CarriesFlag: currentStoreStateObj.player1CarriesFlag,
+                        player2CarriesFlag: currentStoreStateObj.player2CarriesFlag,
+                    });
                 } else {
                     const leftKey = isMultiplayer ? 'a' : 'ArrowLeft';
                     const rightKey = isMultiplayer ? 'd' : 'ArrowRight';

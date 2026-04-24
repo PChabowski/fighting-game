@@ -168,6 +168,25 @@ canvas {
   text-align: center;
 }
 
+.settings-select-row {
+  gap: 10px;
+}
+
+.settings-select {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  border: 2px solid #fff;
+  padding: 8px 10px;
+  font-size: 11px;
+  font-family: "Press Start 2P", system-ui;
+}
+
+.settings-select option {
+  color: #fff;
+  background: #111;
+}
+
 @media (max-width: 600px) {
   .pause-menu-panel {
     padding: 16px 12px;

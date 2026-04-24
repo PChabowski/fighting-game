@@ -1,13 +1,17 @@
 // src/store/useGameStore.js
 import { create } from 'zustand';
+import { AI_DIFFICULTY_ORDER, DEFAULT_AI_DIFFICULTY } from '../engine/utils/aiProfiles';
 
 const AUDIO_SETTINGS_STORAGE_KEY = 'gamefight.audio.settings';
+const AI_DIFFICULTY_STORAGE_KEY = 'gamefight.ai.difficulty';
 const DEFAULT_AUDIO_SETTINGS = {
   masterVolume: 100,
   menuMusicVolume: 10,
   musicVolume: 10,
   sfxVolume: 30,
 };
+
+const AI_DIFFICULTY_SET = new Set(AI_DIFFICULTY_ORDER);
 
 function clampVolume(value, fallback) {
   const numeric = Number(value);
@@ -44,6 +48,32 @@ function saveAudioSettings(settings) {
   }
 }
 
+function normalizeAiDifficulty(value) {
+  const candidate = typeof value === 'string' ? value.toLowerCase() : '';
+  return AI_DIFFICULTY_SET.has(candidate) ? candidate : DEFAULT_AI_DIFFICULTY;
+}
+
+function loadAiDifficulty() {
+  if (typeof window === 'undefined') return DEFAULT_AI_DIFFICULTY;
+
+  try {
+    const raw = window.localStorage.getItem(AI_DIFFICULTY_STORAGE_KEY);
+    return normalizeAiDifficulty(raw);
+  } catch (error) {
+    return DEFAULT_AI_DIFFICULTY;
+  }
+}
+
+function saveAiDifficulty(value) {
+  if (typeof window === 'undefined') return;
+
+  try {
+    window.localStorage.setItem(AI_DIFFICULTY_STORAGE_KEY, normalizeAiDifficulty(value));
+  } catch (error) {
+    // Ignore storage write errors.
+  }
+}
+
 // Ten sklep przechowuje globalny stan gry i udostępnia metody dla silnika
 const useGameStore = create((set) => ({
   // Fazy gry: 'PRELOAD', 'MENU', 'CHAR_SELECT', 'LOBBY', 'GAME'
@@ -67,6 +97,7 @@ const useGameStore = create((set) => ({
   matchType: 'STOCK', // 'STOCK' | 'CTF'
   winner: null, // np. 'Player 1', 'Player 2', 'Tie'
   gameMode: 'PVP', // 'PVP' lub 'ARCADE'
+  aiDifficulty: loadAiDifficulty(),
   isPaused: false,
   audioSettings: loadAudioSettings(),
   
@@ -86,6 +117,11 @@ const useGameStore = create((set) => ({
   setMultiplayer: (val) => set({ isMultiplayer: val }),
   setIsMatchmaking: (val) => set({ isMatchmaking: val }),
   setGameMode: (mode) => set({ gameMode: mode }),
+  setAiDifficulty: (difficulty) => {
+    const normalized = normalizeAiDifficulty(difficulty);
+    saveAiDifficulty(normalized);
+    set({ aiDifficulty: normalized });
+  },
   setPlayroomData: (status, players) => set({ multiplayerStatus: status, playroomPlayers: players }),
   setSelectedLevel: (levelId) => set({ selectedLevel: levelId }),
   setMatchType: (type) => set({ matchType: type }),
