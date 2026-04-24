@@ -1,5 +1,6 @@
 import React from 'react';
 import MobileControls from './MobileControls';
+import EdgeSwipeListener from './EdgeSwipeListener';
 import Timer from './ui/Timer';
 import HealthBar from './ui/HealthBar';
 import WinModal from './ui/WinModal';
@@ -26,6 +27,7 @@ export default function GameInterface() {
       {/* Winner Message */}
       <WinModal />
       <PauseMenu />
+      <EdgeSwipeListener />
       {/* MobileControls render only if WinModal is not visible (winner === null) */}
       {winner === null && !isPaused && <MobileControls />}
     </>
