@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [2.8.0] - 2026-04-24
+
+### Added
+- **Open Arena / Gameplay Revamp**: Large-scale open-arena and level layout updates including revised spawn points and dynamic platform triggers (`src/engine/scenes/open_arena.js`).
+- **Pickup System**: Added `Pickup` class with fixed spawn points, max-capacity checks, and pickup interaction logic (`src/engine/classes/Pickup.js`).
+- **Game Modes & Scoring**: Capture-the-Flag (CTF) and King-of-the-Hill (KOTH) improvements, including KOTH zone tracking and scoring hooks (`src/engine/utils/koth.js`).
+- **Stamina System**: Introduced stamina costs for actions and stamina state syncing across multiplayer (`src/engine/classes/Fighter.js`, `src/store/useGameStore.js`).
+
+### Changed
+- HealthBar and HUD: `HealthBar` now conditionally renders stocks based on match type and respects new open-arena layout.
+- Shop / UI: Updated shop rendering logic and disabled shop in open-arena configuration to prevent overlap.
+- Respawn: Implemented safer dynamic respawn points for long maps and edge-aware spawn placement.
+
+### Fixed
+- Fixed vertical platform collision and fighter clipping on dynamic/vertical platforms (physics/engine fix).
+- Misc multiplayer sync and rematch-related stability improvements that reduce desynchronization on reset.
+
+
+
 ## [2.7.0] - 2026-04-04
 
 ### Added
@@ -25,25 +44,6 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 ### Changed
 - Unified controls structure. Attack arrays now cleanly protect their animation loop (`protectedAnimations` matrix in Fighter.js).
 - Adjusted mobile overlay rendering spacing for additional action buttons.
-
-
-## [2.8.0] - 2026-04-24
-
-### Added
-- **Open Arena / Gameplay Revamp**: Large-scale open-arena and level layout updates including revised spawn points and dynamic platform triggers (`src/engine/scenes/open_arena.js`).
-- **Pickup System**: Added `Pickup` class with fixed spawn points, max-capacity checks, and pickup interaction logic (`src/engine/classes/Pickup.js`).
-- **Game Modes & Scoring**: Capture-the-Flag (CTF) and King-of-the-Hill (KOTH) improvements, including KOTH zone tracking and scoring hooks (`src/engine/utils/koth.js`).
-- **Stamina System**: Introduced stamina costs for actions and stamina state syncing across multiplayer (`src/engine/classes/Fighter.js`, `src/store/useGameStore.js`).
-
-### Changed
-- HealthBar and HUD: `HealthBar` now conditionally renders stocks based on match type and respects new open-arena layout.
-- Shop / UI: Updated shop rendering logic and disabled shop in open-arena configuration to prevent overlap.
-- Respawn: Implemented safer dynamic respawn points for long maps and edge-aware spawn placement.
-
-### Fixed
-- Fixed vertical platform collision and fighter clipping on dynamic/vertical platforms (physics/engine fix).
-- Misc multiplayer sync and rematch-related stability improvements that reduce desynchronization on reset.
-
 
 
 ## [2.6.1] - 2026-03-17
