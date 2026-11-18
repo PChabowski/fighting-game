@@ -38,7 +38,8 @@ test('pollXboxGamepad edge-triggers combat & lock buttons without repeat spam', 
   const buttons = Array.from({ length: 16 }, () => ({ pressed: false, value: 0 }));
   buttons[0] = { pressed: true, value: 1 }; // A -> Jump
   buttons[5] = { pressed: true, value: 1 }; // RB -> Light Attack
-  buttons[4] = { pressed: true, value: 1 }; // LB -> Lock-on Alt
+  buttons[4] = { pressed: true, value: 1 }; // LB -> Toggle focus (Alt)
+  buttons[11] = { pressed: true, value: 1 }; // RS Click -> Cycle target (Tab)
   buttons[7] = { pressed: true, value: 0.9 }; // RT -> Heavy Attack
 
   const first = pollXboxGamepad(makePad({ buttons }), []);
@@ -46,6 +47,7 @@ test('pollXboxGamepad edge-triggers combat & lock buttons without repeat spam', 
   assert.equal(first.lightPressed, true);
   assert.equal(first.heavyPressed, true);
   assert.equal(first.lockTogglePressed, true);
+  assert.equal(first.lockCyclePressed, true);
 
   // Holding the same buttons next frame must NOT re-trigger edge pulses
   const held = pollXboxGamepad(makePad({ buttons }), first.nextButtons);
@@ -53,6 +55,7 @@ test('pollXboxGamepad edge-triggers combat & lock buttons without repeat spam', 
   assert.equal(held.lightPressed, false);
   assert.equal(held.heavyPressed, false);
   assert.equal(held.lockTogglePressed, false);
+  assert.equal(held.lockCyclePressed, false);
 
   // Y button -> Parry / Counter, B button -> Dodge / Feint
   const buttons2 = Array.from({ length: 16 }, () => ({ pressed: false, value: 0 }));

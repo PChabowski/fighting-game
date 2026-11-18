@@ -28,6 +28,12 @@ import { useMobileFullscreen } from '../utils/mobileFullscreen';
 
 type PreviewAnimKey = 'idle' | 'run' | 'attackLight' | 'attackHeavy';
 
+const FACTION_LABEL_KEYS = {
+  iron: 'teamIron',
+  crimson: 'teamCrimson',
+  silver: 'factionSilver',
+} as const;
+
 const HeroSpritePreview: React.FC<{
   heroId: HeroId;
   skinIndex: number;
@@ -553,6 +559,9 @@ export const WarRoomLobby: React.FC = () => {
                     className="w-11 h-11 rounded object-cover border border-slate-700"
                   />
                   <span className="font-display text-xs font-bold text-slate-100">{h.name}</span>
+                  <span className="text-[9px] text-amber-300/80 text-center leading-tight">
+                    {t(language, FACTION_LABEL_KEYS[h.factionId])}
+                  </span>
                   <span className="text-[10px] text-slate-400 text-center leading-tight">
                     {language === 'pl' ? h.classPl : h.classEn}
                   </span>

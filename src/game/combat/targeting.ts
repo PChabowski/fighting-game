@@ -24,11 +24,16 @@ export function cycleLockTarget(
     return enemies[0].id;
   }
 
-  if (enemies.length === 1) {
-    return null;
-  }
-
   return enemies[(idx + 1) % enemies.length].id;
+}
+
+export function toggleFocusTarget(
+  localFighter: Pick<FighterEntity, 'id' | 'team' | 'x' | 'y'>,
+  fighters: Array<Pick<FighterEntity, 'id' | 'team' | 'x' | 'y' | 'alive'>>,
+  currentTargetId: string | null
+): string | null {
+  if (resolveValidLockTarget(localFighter, fighters, currentTargetId)) return null;
+  return cycleLockTarget(localFighter, fighters, null);
 }
 
 export function resolveValidLockTarget(

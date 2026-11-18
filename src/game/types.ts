@@ -23,7 +23,9 @@ export type GameModeId =
 
 export type TeamId = 'iron' | 'crimson';
 
-export type HeroId = 'varek' | 'kurogane' | 'sora';
+export type FactionId = 'iron' | 'crimson' | 'silver';
+
+export type HeroId = 'varek' | 'kurogane' | 'sora' | 'cedric' | 'vesper' | 'astrid';
 
 export type GuardDirection = 'top' | 'left' | 'right';
 
@@ -61,6 +63,7 @@ export interface HeroSkin {
 
 export interface HeroDefinition {
   id: HeroId;
+  factionId: FactionId;
   name: string;
   titlePl: string;
   titleEn: string;

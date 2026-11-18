@@ -624,7 +624,7 @@ export class CanvasRenderer {
       this.drawLockReticle(ctx, f);
     }
 
-    // Only show guard indicator for the local player OR the currently Alt-focused opponent!
+    // Only show guard indicator for the local player or the currently locked opponent.
     if (isLocal || isLockedTarget) {
       this.drawGuardWidget(ctx, f, teamColor, isLocal, controlScheme, virtualGuardOffset);
     }

@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Crosshair, Shield, Swords, Zap } from 'lucide-react';
+import { Crosshair, Shield, Swords, Target, Zap } from 'lucide-react';
 import { GuardDirection, Language } from '../game/types';
 import { t } from '../i18n/translations';
 
@@ -15,7 +15,8 @@ export interface MobileTouchHandlers {
   onParry: () => void;
   onCounter: () => void;
   onFeint: () => void;
-  onCycleLock: () => void;
+  onToggleFocus: () => void;
+  onCycleTarget: () => void;
 }
 
 interface MobileTouchControlsProps {
@@ -157,13 +158,27 @@ export const MobileTouchControls: React.FC<MobileTouchControlsProps> = ({
               type="button"
               onPointerDown={(e) => {
                 e.preventDefault();
-                handlers.onCycleLock();
+                handlers.onToggleFocus();
               }}
               aria-label={t(language, 'touchFocus')}
               className="px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg bg-[#181D26]/90 active:bg-amber-500 active:text-[#0E1116] border border-amber-500/60 text-amber-300 text-[10px] sm:text-[11px] font-bold flex items-center gap-1 touch-none shadow-md"
             >
               <Crosshair className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
               <span>{t(language, 'touchFocus')}</span>
+            </button>
+
+            <button
+              type="button"
+              onPointerDown={(e) => {
+                e.preventDefault();
+                handlers.onCycleTarget();
+              }}
+              aria-label={t(language, 'touchTarget')}
+              title={t(language, 'touchTarget')}
+              className="px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg bg-[#181D26]/90 active:bg-sky-500 active:text-[#0E1116] border border-sky-500/60 text-sky-300 text-[10px] sm:text-[11px] font-bold flex items-center gap-1 touch-none shadow-md"
+            >
+              <Target className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+              <span>{t(language, 'touchTarget')}</span>
             </button>
 
             <button

@@ -11,13 +11,16 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['apple-touch-icon.png'],
       manifest: {
-        name: 'Ash & Iron — 2D Arena Honor',
-        short_name: 'Ash & Iron',
-        description: '2D tactical platforming arena fighter with 3-stance guard, parry, counters, and WebSocket Arena Multiplayer.',
+        name: 'Blood Honor — 2D Arena Combat',
+        short_name: 'Blood Honor',
+        description: 'A tactical 2D arena fighter with local bots and online multiplayer.',
         theme_color: '#0E1116',
         background_color: '#0E1116',
         display: 'fullscreen',
         orientation: 'landscape',
+        start_url: '/',
+        scope: '/',
+        lang: 'pl',
         icons: [
           {
             src: 'pwa-192x192.png',

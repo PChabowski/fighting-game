@@ -566,6 +566,10 @@ export const ModeSelectScreen: React.FC = () => {
               <kbd className="px-2 py-1 bg-[#0E1116] border border-slate-700 rounded font-mono text-amber-300 shrink-0">Alt</kbd>
             </li>
             <li className="flex items-center justify-between gap-3">
+              <span className="text-slate-300">{t(language, 'ctrlSwitchTarget')}</span>
+              <kbd className="px-2 py-1 bg-[#0E1116] border border-slate-700 rounded font-mono text-sky-300 shrink-0">Tab</kbd>
+            </li>
+            <li className="flex items-center justify-between gap-3">
               <span className="text-slate-300">
                 {controlScheme === 'mouse' ? t(language, 'ctrlGuardMouse') : t(language, 'ctrlGuardKeyboard')}
               </span>

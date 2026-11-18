@@ -22,6 +22,7 @@ import {
   cycleLockTarget,
   resolveGuardFromVector,
   resolveValidLockTarget,
+  toggleFocusTarget,
 } from '../game/combat/targeting';
 import {
   findActiveGamepad,
@@ -301,7 +302,18 @@ export const GameArenaView: React.FC = () => {
     networkClient.sendPlayerInput(pulse);
   };
 
-  const toggleOrCycleLock = () => {
+  const toggleFocus = () => {
+    const snap = latestSnapshotRef.current;
+    const me = snap?.fighters.find((f) => f.id === localPlayerId);
+    if (snap && me && me.alive) {
+      const nextId = toggleFocusTarget(me, snap.fighters, lockedTargetRef.current);
+      lockedTargetRef.current = nextId;
+      setLockedTargetId(nextId);
+      flushImmediateOnlinePulse();
+    }
+  };
+
+  const cycleFocusTarget = () => {
     const snap = latestSnapshotRef.current;
     const me = snap?.fighters.find((f) => f.id === localPlayerId);
     if (snap && me && me.alive) {
@@ -324,7 +336,7 @@ export const GameArenaView: React.FC = () => {
       if (code === 'KeyD') lastHorizDirRef.current = 1;
 
       if (
-        ['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'AltLeft', 'AltRight'].includes(
+        ['Space', 'Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'AltLeft', 'AltRight'].includes(
           code
         )
       ) {
@@ -334,7 +346,11 @@ export const GameArenaView: React.FC = () => {
       let changed = false;
 
       if (firstPress && (code === 'AltLeft' || code === 'AltRight')) {
-        toggleOrCycleLock();
+        toggleFocus();
+      }
+
+      if (firstPress && code === 'Tab') {
+        cycleFocusTarget();
       }
 
       if (firstPress && code === 'KeyC') {
@@ -531,7 +547,8 @@ export const GameArenaView: React.FC = () => {
           setAudioModalOpen(!modalOpenRef.current);
         }
         if (!modalOpenRef.current) {
-          if (padRes.lockTogglePressed) toggleOrCycleLock();
+          if (padRes.lockTogglePressed) toggleFocus();
+          if (padRes.lockCyclePressed) cycleFocusTarget();
           if (padRes.lockClearPressed) {
             lockedTargetRef.current = null;
             setLockedTargetId(null);
@@ -768,8 +785,11 @@ export const GameArenaView: React.FC = () => {
         pendingInput.current.feintPressed = true;
         flushImmediateOnlinePulse();
       },
-      onCycleLock: () => {
-        toggleOrCycleLock();
+      onToggleFocus: () => {
+        toggleFocus();
+      },
+      onCycleTarget: () => {
+        cycleFocusTarget();
       },
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1032,9 +1052,13 @@ export const GameArenaView: React.FC = () => {
                 ? language === 'pl'
                   ? 'Fokus: dotknij'
                   : 'Focus: tap'
+                : gamepadConnected
+                ? language === 'pl'
+                  ? 'LB: fokus · klik RS: cel'
+                  : 'LB: focus · RS click: target'
                 : language === 'pl'
-                ? 'Alt / LB: Fokus'
-                : 'Alt / LB: Focus'}
+                ? 'Alt: fokus · Tab: cel'
+                : 'Alt: focus · Tab: target'}
             </span>
             <span className="text-slate-400 shrink-0 ml-2">
               {gamepadConnected

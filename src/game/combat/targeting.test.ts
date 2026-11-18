@@ -5,6 +5,7 @@ import {
   cycleLockTarget,
   resolveGuardFromVector,
   resolveValidLockTarget,
+  toggleFocusTarget,
 } from './targeting';
 
 test('cycleLockTarget focuses nearest alive enemy and cycles through enemies', () => {
@@ -17,30 +18,50 @@ test('cycleLockTarget focuses nearest alive enemy and cycles through enemies', (
     { id: 'e_near', team: 'crimson' as const, x: 600, y: 500, alive: true },
   ];
 
-  // First Alt press selects nearest alive enemy (ignores ally & dead enemy)
+  // First Tab press selects nearest alive enemy (ignores ally & dead enemy)
   const first = cycleLockTarget(local, fighters, null);
   assert.equal(first, 'e_near');
 
-  // Second Alt press switches to next alive enemy
+  // Second Tab press switches to next alive enemy
   const second = cycleLockTarget(local, fighters, first);
   assert.equal(second, 'e_far');
 
-  // Third Alt press wraps back to nearest enemy
+  // Third Tab press wraps back to nearest enemy
   const third = cycleLockTarget(local, fighters, second);
   assert.equal(third, 'e_near');
 });
 
-test('cycleLockTarget toggles off when only one alive enemy remains', () => {
+test('cycleLockTarget keeps the only alive enemy selected', () => {
   const local = { id: 'p1', team: 'iron' as const, x: 500, y: 500 };
   const fighters = [
     { id: 'p1', team: 'iron' as const, x: 500, y: 500, alive: true },
     { id: 'e1', team: 'crimson' as const, x: 650, y: 500, alive: true },
   ];
 
-  const locked = cycleLockTarget(local, fighters, null);
-  assert.equal(locked, 'e1');
-  const unlocked = cycleLockTarget(local, fighters, locked);
-  assert.equal(unlocked, null);
+  assert.equal(cycleLockTarget(local, fighters, 'e1'), 'e1');
+});
+
+test('toggleFocusTarget selects nearest enemy and toggles a valid target off', () => {
+  const local = { id: 'p1', team: 'iron' as const, x: 500, y: 500 };
+  const fighters = [
+    { id: 'p1', team: 'iron' as const, x: 500, y: 500, alive: true },
+    { id: 'e_far', team: 'crimson' as const, x: 900, y: 500, alive: true },
+    { id: 'e_near', team: 'crimson' as const, x: 600, y: 500, alive: true },
+  ];
+
+  assert.equal(toggleFocusTarget(local, fighters, null), 'e_near');
+  assert.equal(toggleFocusTarget(local, fighters, 'e_near'), null);
+});
+
+test('toggleFocusTarget replaces an invalid target with nearest living enemy', () => {
+  const local = { id: 'p1', team: 'iron' as const, x: 500, y: 500 };
+  const fighters = [
+    { id: 'p1', team: 'iron' as const, x: 500, y: 500, alive: true },
+    { id: 'e_dead', team: 'crimson' as const, x: 510, y: 500, alive: false },
+    { id: 'e_live', team: 'crimson' as const, x: 650, y: 500, alive: true },
+  ];
+
+  assert.equal(toggleFocusTarget(local, fighters, 'e_dead'), 'e_live');
 });
 
 test('resolveValidLockTarget clears target when focused enemy dies', () => {

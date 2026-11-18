@@ -206,7 +206,7 @@ export class ErrorOverlay extends HTMLElement {}
   }
 
   server.listen(PORT, '0.0.0.0', () => {
-    console.log(`[Ash & Iron Server] Listening on http://0.0.0.0:${PORT} (ws://.../ws)`);
+    console.log(`[Blood Honor Server] Listening on http://0.0.0.0:${PORT} (ws://.../ws)`);
   });
 
   process.on('SIGINT', () => {
@@ -217,6 +217,6 @@ export class ErrorOverlay extends HTMLElement {}
 }
 
 startServer().catch((err) => {
-  console.error('[Ash & Iron Server] Fatal startup error:', err);
+  console.error('[Blood Honor Server] Fatal startup error:', err);
   process.exit(1);
 });

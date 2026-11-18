@@ -27,7 +27,7 @@ const TEAM_SIZE_BY_MODE: Record<GameModeId, number> = {
 
 const BOT_NAMES_IRON = ['Takeda', 'Ragnar', 'Valkyr', 'Kage', 'Garrick', 'Soren'];
 const BOT_NAMES_CRIMSON = ['Akuma', 'Draven', 'Yuki', 'Mordecai', 'Hana', 'Vex'];
-const HERO_ROTATION: HeroId[] = ['varek', 'kurogane', 'sora'];
+const HERO_ROTATION: HeroId[] = ['varek', 'kurogane', 'sora', 'cedric', 'vesper', 'astrid'];
 const ROOM_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
 interface ClientConnection {

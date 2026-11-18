@@ -29,6 +29,7 @@ export interface GamepadPollResult {
   feintPressed: boolean;
   counterPressed: boolean;
   lockTogglePressed: boolean;
+  lockCyclePressed: boolean;
   lockClearPressed: boolean;
   menuTogglePressed: boolean;
   nextButtons: boolean[];
@@ -59,6 +60,7 @@ export function pollXboxGamepad(
       feintPressed: false,
       counterPressed: false,
       lockTogglePressed: false,
+      lockCyclePressed: false,
       lockClearPressed: false,
       menuTogglePressed: false,
       nextButtons: [],
@@ -108,7 +110,7 @@ export function pollXboxGamepad(
   // RT (7) -> Heavy Attack / Parry
   // Y (3) -> Dedicated Parry / Counter Riposte
   // B (1) -> Dodge / Dash (also Feint if pressed mid-heavy windup)
-  // LB (4) or RS Click (11) -> Focus / Switch Enemy (Alt)
+  // LB (4) toggles focus; RS Click (11) cycles to the next enemy.
   // View (8) -> Clear Focus
   // Start (9) -> Toggle Settings Modal
   const lightPressed = justPressed(5) || justPressed(2);
@@ -117,7 +119,8 @@ export function pollXboxGamepad(
   const counterPressed = justPressed(3);
   const dashPressed = justPressed(1);
   const feintPressed = justPressed(1);
-  const lockTogglePressed = justPressed(4) || justPressed(11);
+  const lockTogglePressed = justPressed(4);
+  const lockCyclePressed = justPressed(11);
   const lockClearPressed = justPressed(8);
   const menuTogglePressed = justPressed(9);
 
@@ -131,6 +134,7 @@ export function pollXboxGamepad(
     parryPressed ||
     dashPressed ||
     lockTogglePressed ||
+    lockCyclePressed ||
     lockClearPressed ||
     menuTogglePressed;
 
@@ -150,6 +154,7 @@ export function pollXboxGamepad(
     feintPressed,
     counterPressed,
     lockTogglePressed,
+    lockCyclePressed,
     lockClearPressed,
     menuTogglePressed,
     nextButtons,

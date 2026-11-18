@@ -1,7 +1,7 @@
 {
   "name": "blood-honor",
   "version": "2.7.0",
-  "description": "Ash & Iron — 2D tactical arena platformer inspired by For Honor & Need For Kill, powered by React, Canvas 2D, and a custom Node.js WebSocket multiplayer server.",
+  "description": "Blood Honor is a 2D tactical arena fighter with local bots and online multiplayer, powered by React, Canvas 2D, and a custom Node.js WebSocket server.",
   "main": "server.ts",
   "scripts": {
     "test": "npx tsx --test src/game/combat/targeting.test.ts src/game/GameSimulation.test.ts src/server/roomManager.test.ts src/game/input/gamepadDriver.test.ts src/game/net/netPredictor.test.ts src/game/arenas/arenas.test.ts",
@@ -45,5 +45,6 @@
     "@vitejs/plugin-react": "^5.1.4",
     "vite": "^7.3.1",
     "vite-plugin-pwa": "^1.2.0"
-  }
+  },
+  "packageManager": "pnpm@10.11.0+sha512.6540583f41cc5f628eb3d9773ecee802f4f9ef9923cc45b69890fb47991d4b092964694ec3a4f738a420c918a333062c8b925d312f42e4f0c263eb603551f977"
 }
